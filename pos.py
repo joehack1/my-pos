@@ -809,4 +809,120 @@ class MainApp:
             
             Label(add_win, text="Role:").pack(pady=5)
             role_combo = ttk.Combobox(add_win, values=["admin", "cashier"], state="readonly")
-            role_com
+            role_combo.pack()
+            role_combo.set("cashier")
+            
+            Label(add_win, text="Full Name:").pack(pady=5)
+            fullname_entry = Entry(add_win)
+            fullname_entry.pack()
+            
+            def save_user():
+                if not username_entry.get() or not password_entry.get():
+                    messagebox.showerror("Error", "Username and password required!")
+                    return
+                
+                password_hash = hashlib.sha256(password_entry.get().encode()).hexdigest()
+                try:
+                    self.db.execute_query("""
+                        INSERT INTO users (username, password, role, full_name)
+                        VALUES (?, ?, ?, ?)
+                    """, (username_entry.get(), password_hash, role_combo.get(), fullname_entry.get()))
+                    messagebox.showinfo("Success", "User added successfully!")
+                    load_users()
+                    add_win.destroy()
+                except sqlite3.IntegrityError:
+                    messagebox.showerror("Error", "Username already exists!")
+            
+            Button(add_win, text="Save", command=save_user, bg="#4CAF50", fg="white").pack(pady=20)
+        
+        def delete_user():
+            selected = tree.selection()
+            if not selected:
+                messagebox.showwarning("Warning", "Please select a user to delete!")
+                return
+            
+            user_id = tree.item(selected[0])['values'][0]
+            if user_id == self.user_id:
+                messagebox.showerror("Error", "Cannot delete your own account!")
+                return
+            
+            if messagebox.askyesno("Confirm", "Delete this user?"):
+                self.db.execute_query("DELETE FROM users WHERE id=?", (user_id,))
+                load_users()
+        
+        Button(user_win, text="Add User", command=add_user, bg="#4CAF50", fg="white").pack(side=LEFT, padx=10, pady=10)
+        Button(user_win, text="Delete User", command=delete_user, bg="#f44336", fg="white").pack(side=LEFT, padx=10, pady=10)
+        
+        load_users()
+    
+    def category_management(self):
+        if self.role != "admin":
+            messagebox.showerror("Error", "Access denied! Admin only.")
+            return
+        
+        cat_win = Toplevel(self.root)
+        cat_win.title("Category Management")
+        cat_win.geometry("400x300")
+        
+        tree = ttk.Treeview(cat_win, columns=("ID", "Name", "Description"), show="headings")
+        for col in ("ID", "Name", "Description"):
+            tree.heading(col, text=col)
+            tree.column(col, width=100)
+        tree.pack(fill=BOTH, expand=True, padx=10, pady=10)
+        
+        def load_categories():
+            for item in tree.get_children():
+                tree.delete(item)
+            categories = self.db.fetch_all("SELECT id, name, description FROM categories")
+            for cat in categories:
+                tree.insert("", END, values=cat)
+        
+        def add_category():
+            name = simpledialog.askstring("Add Category", "Category Name:")
+            if name:
+                desc = simpledialog.askstring("Add Category", "Description (optional):")
+                try:
+                    self.db.execute_query("INSERT INTO categories (name, description) VALUES (?, ?)", (name, desc or ""))
+                    load_categories()
+                    self.load_categories()  # Refresh main UI categories
+                    messagebox.showinfo("Success", "Category added!")
+                except sqlite3.IntegrityError:
+                    messagebox.showerror("Error", "Category already exists!")
+        
+        def delete_category():
+            selected = tree.selection()
+            if not selected:
+                messagebox.showwarning("Warning", "Please select a category to delete!")
+                return
+            
+            cat_id = tree.item(selected[0])['values'][0]
+            cat_name = tree.item(selected[0])['values'][1]
+            
+            # Check if category has products
+            products = self.db.fetch_one("SELECT COUNT(*) FROM products WHERE category_id=?", (cat_id,))
+            if products[0] > 0:
+                messagebox.showerror("Error", f"Cannot delete '{cat_name}' because it has {products[0]} products!")
+                return
+            
+            if messagebox.askyesno("Confirm", f"Delete category '{cat_name}'?"):
+                self.db.execute_query("DELETE FROM categories WHERE id=?", (cat_id,))
+                load_categories()
+                self.load_categories()
+        
+        Button(cat_win, text="Add Category", command=add_category, bg="#4CAF50", fg="white").pack(side=LEFT, padx=10, pady=10)
+        Button(cat_win, text="Delete Category", command=delete_category, bg="#f44336", fg="white").pack(side=LEFT, padx=10, pady=10)
+        
+        load_categories()
+    
+    def logout(self):
+        if messagebox.askyesno("Confirm", "Logout?"):
+            self.db.close()
+            self.root.destroy()
+            login_root = Tk()
+            LoginWindow(login_root)
+            login_root.mainloop()
+
+if __name__ == "__main__":
+    root = Tk()
+    LoginWindow(root)
+    root.mainloop()
