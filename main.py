@@ -598,7 +598,6 @@ class MainApp:
         
         # Receipt info
         story.append(Paragraph(f"Invoice: {invoice_no}", styles['Normal']))
-         story.append(Paragraph(f"Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
         story.append(Paragraph(f"Date: {sale[6]}", styles['Normal']))
         story.append(Paragraph(f"Cashier: {self.full_name}", styles['Normal']))
         story.append(Spacer(1, 20))
@@ -627,7 +626,6 @@ class MainApp:
         story.append(Paragraph(f"Total: ${sale[3]:.2f}", styles['Normal']))
         story.append(Paragraph(f"Paid: ${sale[4]:.2f}", styles['Normal']))
         story.append(Paragraph(f"Change: ${sale[5]:.2f}", styles['Normal']))
-        story.append(Paragraph(f"Payment: {sale[6]}", styles['Normal']))
         story.append(Paragraph(f"Payment: {sale[7]}", styles['Normal']))
         story.append(Spacer(1, 20))
         
@@ -637,6 +635,12 @@ class MainApp:
         
         doc.build(story)
         self.status_bar.config(text=f"Receipt saved: {filename}")
+
+        # Automatically open the PDF for preview and printing
+        try:
+            os.startfile(filename)
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not open receipt: {e}")
 
         try:
             os.startfile(filename)
