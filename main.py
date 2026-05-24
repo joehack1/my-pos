@@ -297,10 +297,12 @@ class MainApp:
             width = 40 if col == "ID" else 120 if col == "Name" else 70
             self.cart_tree.column(col, width=width)
         
-        self.cart_tree.pack(rollbar(cart_frame, orient=VERTICAL, command=self.cart_tree.yview)
+        self.cart_tree.pack(side=LEFT, fill=BOTH, expand=True)
+
+        cart_scroll = ttk.Scrollbar(cart_frame, orient=VERTICAL, command=self.cart_tree.yview)
         self.cart_tree.configure(yscrollcommand=cart_scroll.set)
         cart_scroll.pack(side=RIGHT, fill=Y)
-        
+
         # Cart control buttons
         btn_frame = Frame(right_frame)
         btn_frame.pack(fill=X, pady=5)
@@ -378,7 +380,13 @@ class MainApp:
             return
         
         item = self.product_tree.item(selected[0])
-        product_id, barcode, name, price, stock, unit = item['values']
+        values = item['values']
+        
+        # Explicitly cast types to ensure arithmetic and comparisons work
+        product_id = int(values[0])
+        name = str(values[2])
+        price = float(values[3])
+        stock = int(values[4])
         
         if stock <= 0:
             messagebox.showwarning("Warning", f"{name} is out of stock!")
@@ -590,7 +598,8 @@ class MainApp:
         
         # Receipt info
         story.append(Paragraph(f"Invoice: {invoice_no}", styles['Normal']))
-        story.append(Paragraph(f"Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
+         story.append(Paragraph(f"Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
+        story.append(Paragraph(f"Date: {sale[6]}", styles['Normal']))
         story.append(Paragraph(f"Cashier: {self.full_name}", styles['Normal']))
         story.append(Spacer(1, 20))
         
@@ -619,6 +628,7 @@ class MainApp:
         story.append(Paragraph(f"Paid: ${sale[4]:.2f}", styles['Normal']))
         story.append(Paragraph(f"Change: ${sale[5]:.2f}", styles['Normal']))
         story.append(Paragraph(f"Payment: {sale[6]}", styles['Normal']))
+        story.append(Paragraph(f"Payment: {sale[7]}", styles['Normal']))
         story.append(Spacer(1, 20))
         
         # Footer
@@ -627,6 +637,11 @@ class MainApp:
         
         doc.build(story)
         self.status_bar.config(text=f"Receipt saved: {filename}")
+
+        try:
+            os.startfile(filename)
+        except Exception as e:
+            messagebox.showwarning("Warning", f"Could not open PDF: {e}")
     
     def change_password(self):
         change_win = Toplevel(self.root)
@@ -691,9 +706,11 @@ class MainApp:
             tree.heading(col, text=col)
             tree.column(col, width=100)
         tree.pack(side=LEFT, fill=BOTH, expand=True, padx=(10, 0), pady=10)
-tk.Scrollbar(report_win, orient=VERTICAL, command=tree.yview)
-        tree.confik(side=RIGHT, fill=Y, pady=10, padx=(0, 10))
-        
+
+        scroll = ttk.Scrollbar(report_win, orient=VERTICAL, command=tree.yview)
+        tree.configure(yscrollcommand=scroll.set)
+        scroll.pack(side=RIGHT, fill=Y, pady=10, padx=(0, 10))
+
         total_sales = 0
         for sale in sales:
             tree.insert("", END, values=(sale[0], f"${sale[1]:.2f}", sale[2][11:16], sale[3], sale[4]))
@@ -721,9 +738,11 @@ tk.Scrollbar(report_win, orient=VERTICAL, command=tree.yview)
             tree.column(col, width=100)
         tree.pack(side=LEFT, fill=BOTH, expand=True, padx=(10, 0), pady=10)
 
-        scroll = tgure(yscrollcommand=scroll.set)
+        scroll = ttk.Scrollbar(report_win, orient=VERTICAL, command=tree.yview)
+        tree.configure(yscrollcommand=scroll.set)
         scroll.pack(side=RIGHT, fill=Y, pady=10, padx=(0, 10))
-        items = []
+        
+        low_stock_items = []
         for product in products:
             status = "Low Stock" if product[3] <= product[4] else "OK"
             if product[3] <= product[4]:
@@ -760,10 +779,12 @@ tk.Scrollbar(report_win, orient=VERTICAL, command=tree.yview)
             tree.column(col, width=150)
         tree.pack(side=LEFT, fill=BOTH, expand=True, padx=(10, 0), pady=10)
 
-        scroll = ttk.Scrollbar(histor
+        scroll = ttk.Scrollbar(history_win, orient=VERTICAL, command=tree.yview)
+        tree.configure(yscrollcommand=scroll.set)
         scroll.pack(side=RIGHT, fill=Y, pady=10, padx=(0, 10))
         
         def load_history():
+            for item in tree.get_children():
                 tree.delete(item)
             
             sales = self.db.fetch_all("""
@@ -777,7 +798,21 @@ tk.Scrollbar(report_win, orient=VERTICAL, command=tree.yview)
             for sale in sales:
                 tree.insert("", END, values=(sale[0], sale[1][:19], f"${sale[2]:.2f}", sale[3], sale[4]))
         
+        def reprint_receipt():
+            selected = tree.selection()
+            if not selected:
+                messagebox.showwarning("Warning", "Please select a sale to reprint!")
+                return
+            
+            invoice_no = tree.item(selected[0])['values'][0]
+            sale_record = self.db.fetch_one("SELECT id FROM sales WHERE invoice_no=?", (invoice_no,))
+            if sale_record:
+                self.generate_receipt(invoice_no, sale_record[0])
+            else:
+                messagebox.showerror("Error", "Sale record not found!")
+
         Button(filter_frame, text="Load Report", command=load_history, bg="#2196F3", fg="white").pack(side=LEFT, padx=10)
+        Button(filter_frame, text="Reprint Selected", command=reprint_receipt, bg="#FF9800", fg="white").pack(side=LEFT, padx=10)
         load_history()
     
     def user_management(self):
@@ -797,11 +832,13 @@ tk.Scrollbar(report_win, orient=VERTICAL, command=tree.yview)
 
         scroll = ttk.Scrollbar(user_win, orient=VERTICAL, command=tree.yview)
         tree.configure(yscrollcommand=scroll.set)
-        scroll.pac
+        scroll.pack(side=RIGHT, fill=Y, pady=10, padx=(0, 10))
+
         def load_users():
             for item in tree.get_children():
                 tree.delete(item)
-            users er in users:
+            users = self.db.fetch_all("SELECT id, username, role, full_name FROM users")
+            for user in users:
                 tree.insert("", END, values=user)
         
         def add_user():
@@ -882,12 +919,14 @@ tk.Scrollbar(report_win, orient=VERTICAL, command=tree.yview)
 
         scroll = ttk.Scrollbar(cat_win, orient=VERTICAL, command=tree.yview)
         tree.configure(yscrollcommand=scroll.set)
-        scroll.pack(side=RIGHT, fillY
+        scroll.pack(side=RIGHT, fill=Y, pady=10, padx=(0, 10))
+
         def load_categories():
             for item in tree.get_children():
                 tree.delete(item)
             categories = self.db.fetch_all("SELECT id, name, description FROM categories")
             for cat in categories:
+                tree.insert("", END, values=cat)
         
         def add_category():
             name = simpledialog.askstring("Add Category", "Category Name:")
