@@ -511,7 +511,10 @@ class MainApp:
         
         def calculate_change(*args):
             try:
-                paid = float(paid_entry.get())
+                val = paid_entry.get()
+                if not val:
+                    val = "0"
+                paid = float(val)
                 change = paid - total
                 change_label.config(text=f"Change: ${change:.2f}" if change >= 0 else f"Short: ${-change:.2f}")
             except:
@@ -636,16 +639,11 @@ class MainApp:
         doc.build(story)
         self.status_bar.config(text=f"Receipt saved: {filename}")
 
-        # Automatically open the PDF for preview and printing
+        # Automatically open the PDF for preview and printing (merged duplicate)
         try:
             os.startfile(filename)
         except Exception as e:
             messagebox.showerror("Error", f"Could not open receipt: {e}")
-
-        try:
-            os.startfile(filename)
-        except Exception as e:
-            messagebox.showwarning("Warning", f"Could not open PDF: {e}")
     
     def change_password(self):
         change_win = Toplevel(self.root)

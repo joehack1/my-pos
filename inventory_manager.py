@@ -22,6 +22,9 @@ class InventoryManager:
             return False
     
     def update_product(self, product_id, **kwargs):
+        if not kwargs:
+            return
+            
         fields = []
         values = []
         for key, value in kwargs.items():
