@@ -297,7 +297,9 @@ class MainApp:
             width = 40 if col == "ID" else 120 if col == "Name" else 70
             self.cart_tree.column(col, width=width)
         
-        self.cart_tree.pack(fill=BOTH, expand=True)
+        self.cart_tree.pack(rollbar(cart_frame, orient=VERTICAL, command=self.cart_tree.yview)
+        self.cart_tree.configure(yscrollcommand=cart_scroll.set)
+        cart_scroll.pack(side=RIGHT, fill=Y)
         
         # Cart control buttons
         btn_frame = Frame(right_frame)
@@ -688,7 +690,9 @@ class MainApp:
         for col in ("Invoice", "Total", "Time", "Payment", "Cashier"):
             tree.heading(col, text=col)
             tree.column(col, width=100)
-        tree.pack(fill=BOTH, expand=True, padx=10, pady=10)
+        tree.pack(side=LEFT, fill=BOTH, expand=True, padx=(10, 0), pady=10)
+tk.Scrollbar(report_win, orient=VERTICAL, command=tree.yview)
+        tree.confik(side=RIGHT, fill=Y, pady=10, padx=(0, 10))
         
         total_sales = 0
         for sale in sales:
@@ -715,9 +719,11 @@ class MainApp:
         for col in ("Product", "Category", "Price", "Stock", "Min Stock", "Unit", "Status"):
             tree.heading(col, text=col)
             tree.column(col, width=100)
-        tree.pack(fill=BOTH, expand=True, padx=10, pady=10)
-        
-        low_stock_items = []
+        tree.pack(side=LEFT, fill=BOTH, expand=True, padx=(10, 0), pady=10)
+
+        scroll = tgure(yscrollcommand=scroll.set)
+        scroll.pack(side=RIGHT, fill=Y, pady=10, padx=(0, 10))
+        items = []
         for product in products:
             status = "Low Stock" if product[3] <= product[4] else "OK"
             if product[3] <= product[4]:
@@ -752,10 +758,12 @@ class MainApp:
         for col in ("Invoice", "Date", "Total", "Cashier", "Payment"):
             tree.heading(col, text=col)
             tree.column(col, width=150)
-        tree.pack(fill=BOTH, expand=True, padx=10, pady=10)
+        tree.pack(side=LEFT, fill=BOTH, expand=True, padx=(10, 0), pady=10)
+
+        scroll = ttk.Scrollbar(histor
+        scroll.pack(side=RIGHT, fill=Y, pady=10, padx=(0, 10))
         
         def load_history():
-            for item in tree.get_children():
                 tree.delete(item)
             
             sales = self.db.fetch_all("""
@@ -785,13 +793,15 @@ class MainApp:
         for col in ("ID", "Username", "Role", "Full Name"):
             tree.heading(col, text=col)
             tree.column(col, width=100)
-        tree.pack(fill=BOTH, expand=True, padx=10, pady=10)
-        
+        tree.pack(side=LEFT, fill=BOTH, expand=True, padx=(10, 0), pady=10)
+
+        scroll = ttk.Scrollbar(user_win, orient=VERTICAL, command=tree.yview)
+        tree.configure(yscrollcommand=scroll.set)
+        scroll.pac
         def load_users():
             for item in tree.get_children():
                 tree.delete(item)
-            users = self.db.fetch_all("SELECT id, username, role, full_name FROM users")
-            for user in users:
+            users er in users:
                 tree.insert("", END, values=user)
         
         def add_user():
@@ -868,14 +878,16 @@ class MainApp:
         for col in ("ID", "Name", "Description"):
             tree.heading(col, text=col)
             tree.column(col, width=100)
-        tree.pack(fill=BOTH, expand=True, padx=10, pady=10)
-        
+        tree.pack(side=LEFT, fill=BOTH, expand=True, padx=(10, 0), pady=10)
+
+        scroll = ttk.Scrollbar(cat_win, orient=VERTICAL, command=tree.yview)
+        tree.configure(yscrollcommand=scroll.set)
+        scroll.pack(side=RIGHT, fillY
         def load_categories():
             for item in tree.get_children():
                 tree.delete(item)
             categories = self.db.fetch_all("SELECT id, name, description FROM categories")
             for cat in categories:
-                tree.insert("", END, values=cat)
         
         def add_category():
             name = simpledialog.askstring("Add Category", "Category Name:")
