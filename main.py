@@ -13,6 +13,128 @@ from reportlab.lib.units import inch
 import os
 from decimal import Decimal
 
+# -------------------------
+# Theme system (4 themes)
+# -------------------------
+THEMES = {
+    "Dark": {
+        "root_bg": "#121212",
+        "frame_bg": "#1E1E1E",
+        "label_bg": "#121212",
+        "label_fg": "#EAEAEA",
+        "entry_bg": "#2A2A2A",
+        "entry_fg": "#EAEAEA",
+        "card_bg": "#1E1E1E",
+        "labelframe_bg": "#1E1E1E",
+        "labelframe_fg": "#EAEAEA",
+        "accent": "#4CAF50",
+        "accent2": "#2196F3",
+        "danger": "#f44336",
+        "warning": "#FF9800",
+        "info": "#9C27B0",
+        "tree_bg": "#1E1E1E",
+        "tree_fg": "#EAEAEA",
+        "tree_heading_bg": "#2A2A2A",
+        "tree_heading_fg": "#EAEAEA",
+        "tree_select_bg": "#3949AB",
+    },
+    "Light": {
+        "root_bg": "#F5F5F5",
+        "frame_bg": "#FFFFFF",
+        "label_bg": "#F5F5F5",
+        "label_fg": "#111111",
+        "entry_bg": "#FFFFFF",
+        "entry_fg": "#111111",
+        "card_bg": "#FFFFFF",
+        "labelframe_bg": "#FFFFFF",
+        "labelframe_fg": "#111111",
+        "accent": "#4CAF50",
+        "accent2": "#2196F3",
+        "danger": "#f44336",
+        "warning": "#FF9800",
+        "info": "#9C27B0",
+        "tree_bg": "#FFFFFF",
+        "tree_fg": "#111111",
+        "tree_heading_bg": "#E0E0E0",
+        "tree_heading_fg": "#111111",
+        "tree_select_bg": "#B3D4FC",
+    },
+    "Blue": {
+        "root_bg": "#0B1B3A",
+        "frame_bg": "#12315E",
+        "label_bg": "#0B1B3A",
+        "label_fg": "#EAF2FF",
+        "entry_bg": "#163B70",
+        "entry_fg": "#EAF2FF",
+        "card_bg": "#12315E",
+        "labelframe_bg": "#12315E",
+        "labelframe_fg": "#EAF2FF",
+        "accent": "#2E7DFF",
+        "accent2": "#00BCD4",
+        "danger": "#FF5252",
+        "warning": "#FFC107",
+        "info": "#7C4DFF",
+        "tree_bg": "#12315E",
+        "tree_fg": "#EAF2FF",
+        "tree_heading_bg": "#1B3F78",
+        "tree_heading_fg": "#EAF2FF",
+        "tree_select_bg": "#1E5CBF",
+    },
+    "Mint": {
+        "root_bg": "#06221C",
+        "frame_bg": "#0B3A2E",
+        "label_bg": "#06221C",
+        "label_fg": "#E9FFF6",
+        "entry_bg": "#0F4A39",
+        "entry_fg": "#E9FFF6",
+        "card_bg": "#0B3A2E",
+        "labelframe_bg": "#0B3A2E",
+        "labelframe_fg": "#E9FFF6",
+        "accent": "#2ECC71",
+        "accent2": "#1ABC9C",
+        "danger": "#E74C3C",
+        "warning": "#F39C12",
+        "info": "#3498DB",
+        "tree_bg": "#0B3A2E",
+        "tree_fg": "#E9FFF6",
+        "tree_heading_bg": "#11624E",
+        "tree_heading_fg": "#E9FFF6",
+        "tree_select_bg": "#2D9CDB",
+    },
+}
+
+
+def apply_ttk_theme(style: ttk.Style, theme_name: str):
+    t = THEMES[theme_name]
+
+    # Treeview styling
+    style.configure("Custom.Treeview",
+                    background=t["tree_bg"],
+                    foreground=t["tree_fg"],
+                    fieldbackground=t["tree_bg"],
+                    rowheight=24)
+
+    style.configure("Custom.Treeview.Heading",
+                    background=t["tree_heading_bg"],
+                    foreground=t["tree_heading_fg"],
+                    relief="flat")
+
+    style.map("Custom.Treeview",
+              background=[("selected", t["tree_select_bg"])],
+              foreground=[("selected", t["tree_fg"])])
+
+    # Combobox styling
+    style.configure("Custom.TCombobox",
+                    fieldbackground=t["entry_bg"],
+                    background=t["entry_bg"],
+                    foreground=t["entry_fg"],
+                    bordercolor=t["tree_heading_bg"])
+
+    # Labels via ttk are limited, but Treeview/Combobox will look consistent
+    return
+
+
+
 class Database:
     def __init__(self, db_name="mypos.db"):
         self.conn = sqlite3.connect(db_name)
@@ -147,7 +269,8 @@ class LoginWindow:
         
         # Login button
         login_btn = Button(self.login_frame, text="Login", font=("Arial", 12), command=self.login, 
-                          bg="#4CAF50", fg="white", padx=20, pady=5)
+                          bg=THEMES["Dark"]["accent"], fg="white", padx=20, pady=5)
+
         login_btn.grid(row=3, column=0, columnspan=2, pady=20)
         
         # Bind Enter key
@@ -182,27 +305,51 @@ class MainApp:
         self.root = root
         self.user = user
         self.user_id, self.username, self.role, self.full_name = user
-        
+
         self.root.title(f"myPOS - {self.full_name} ({self.role})")
         self.root.geometry("1200x700")
-        
+
         self.db = Database()
         self.cart = []
-        
+
+        # Theme state
+        self.theme_name = "Dark"
+        self.style = ttk.Style(self.root)
+
+        # Base tk background for login/main widgets
+        self.root.configure(bg=THEMES[self.theme_name]["root_bg"])
+
+
         # Setup UI
         self.setup_menu()
         self.setup_main_interface()
-        
+
+        # Apply initial theme (after widgets exist)
+        self.apply_theme(self.theme_name)
+
         # Load initial data
         self.load_categories()
         self.load_products()
+
     
     def setup_menu(self):
         menubar = Menu(self.root)
         self.root.config(menu=menubar)
-        
+
+        # Theme menu
+        theme_menu = Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Theme", menu=theme_menu)
+        for name in THEMES.keys():
+            theme_menu.add_radiobutton(
+                label=name,
+                value=name,
+                variable=StringVar(value=self.theme_name),
+                command=lambda n=name: self.set_theme(n)
+            )
+
         # File menu
         file_menu = Menu(menubar, tearoff=0)
+
         menubar.add_cascade(label="File", menu=file_menu)
         file_menu.add_command(label="Change Password", command=self.change_password)
         file_menu.add_separator()
@@ -223,9 +370,44 @@ class MainApp:
             manage_menu.add_command(label="User Management", command=self.user_management)
             manage_menu.add_command(label="Category Management", command=self.category_management)
     
+    def apply_theme(self, theme_name: str):
+        if theme_name not in THEMES:
+            return
+        self.theme_name = theme_name
+        t = THEMES[theme_name]
+
+        # Root background
+        self.root.configure(bg=t["root_bg"])
+
+        # ttk themes (custom styles)
+        apply_ttk_theme(self.style, theme_name)
+
+        # Update commonly-used widget styles if they exist
+        # (widgets are stored as attributes in setup_main_interface)
+        for w in (getattr(self, "total_label", None),):
+            if w is not None:
+                w.configure(bg=t["frame_bg"], fg=t["label_fg"])
+
+        # Treeviews
+        for tv in (getattr(self, "product_tree", None), getattr(self, "cart_tree", None)):
+            if tv is not None:
+                tv.configure(style="Custom.Treeview")
+
+        # Combobox
+        if getattr(self, "category_combo", None) is not None:
+            self.category_combo.configure(style="Custom.TCombobox")
+
+        # Status bar
+        if getattr(self, "status_bar", None) is not None:
+            self.status_bar.configure(bg=t["frame_bg"], fg=t["label_fg"])
+
+    def set_theme(self, theme_name: str):
+        self.apply_theme(theme_name)
+
     def setup_main_interface(self):
         # Main container
         main_frame = Frame(self.root)
+
         main_frame.pack(fill=BOTH, expand=True, padx=10, pady=10)
         
         # Left panel - Products
@@ -271,7 +453,8 @@ class MainApp:
         
         # Add to cart button
         add_btn = Button(left_frame, text="Add to Cart", command=self.add_to_cart, 
-                        bg="#2196F3", fg="white", font=("Arial", 12), padx=20, pady=5)
+                        bg=THEMES[self.theme_name]["accent2"], fg="white", font=("Arial", 12), padx=20, pady=5)
+
         add_btn.pack(pady=10)
         
         # Bind double-click to add to cart
@@ -308,11 +491,12 @@ class MainApp:
         btn_frame.pack(fill=X, pady=5)
         
         Button(btn_frame, text="Remove Selected", command=self.remove_from_cart, 
-               bg="#f44336", fg="white").pack(side=LEFT, padx=5)
+               bg=THEMES[self.theme_name]["danger"], fg="white").pack(side=LEFT, padx=5)
         Button(btn_frame, text="Clear Cart", command=self.clear_cart, 
-               bg="#FF9800", fg="white").pack(side=LEFT, padx=5)
+               bg=THEMES[self.theme_name]["warning"], fg="white").pack(side=LEFT, padx=5)
         Button(btn_frame, text="Update Quantity", command=self.update_quantity, 
-               bg="#FFC107", fg="black").pack(side=LEFT, padx=5)
+               bg=THEMES[self.theme_name]["warning"], fg=t["label_fg"]).pack(side=LEFT, padx=5)
+
         
         # Total and checkout
         total_frame = LabelFrame(right_frame, text="Order Summary", padx=10, pady=10)
@@ -322,7 +506,8 @@ class MainApp:
         self.total_label.pack()
         
         checkout_btn = Button(total_frame, text="Checkout", command=self.checkout,
-                             bg="#4CAF50", fg="white", font=("Arial", 14), padx=40, pady=10)
+                             bg=THEMES[self.theme_name]["accent"], fg="white", font=("Arial", 14), padx=40, pady=10)
+
         checkout_btn.pack(pady=10)
         
         # Status bar
@@ -571,7 +756,8 @@ class MainApp:
                 messagebox.showerror("Error", f"Failed to complete sale: {str(e)}")
         
         Button(checkout_win, text="Complete Sale", command=complete_sale, 
-               bg="#4CAF50", fg="white", font=("Arial", 12), padx=20, pady=10).pack(pady=20)
+               bg=THEMES[self.theme_name]["accent"], fg="white", font=("Arial", 12), padx=20, pady=10).pack(pady=20)
+
     
     def generate_receipt(self, invoice_no, sale_id):
         # Get sale details
@@ -685,7 +871,8 @@ class MainApp:
             messagebox.showinfo("Success", "Password changed successfully!")
             change_win.destroy()
         
-        Button(change_win, text="Change Password", command=change, bg="#4CAF50", fg="white").pack(pady=20)
+        Button(change_win, text="Change Password", command=change, bg=THEMES[self.theme_name]["accent"], fg="white").pack(pady=20)
+
     
     def daily_sales_report(self):
         report_win = Toplevel(self.root)
@@ -813,8 +1000,9 @@ class MainApp:
             else:
                 messagebox.showerror("Error", "Sale record not found!")
 
-        Button(filter_frame, text="Load Report", command=load_history, bg="#2196F3", fg="white").pack(side=LEFT, padx=10)
-        Button(filter_frame, text="Reprint Selected", command=reprint_receipt, bg="#FF9800", fg="white").pack(side=LEFT, padx=10)
+        Button(filter_frame, text="Load Report", command=load_history, bg=THEMES[self.theme_name]["accent2"], fg="white").pack(side=LEFT, padx=10)
+        Button(filter_frame, text="Reprint Selected", command=reprint_receipt, bg=THEMES[self.theme_name]["warning"], fg="white").pack(side=LEFT, padx=10)
+
         load_history()
     
     def user_management(self):
@@ -899,8 +1087,9 @@ class MainApp:
                 self.db.execute_query("DELETE FROM users WHERE id=?", (user_id,))
                 load_users()
         
-        Button(user_win, text="Add User", command=add_user, bg="#4CAF50", fg="white").pack(side=LEFT, padx=10, pady=10)
-        Button(user_win, text="Delete User", command=delete_user, bg="#f44336", fg="white").pack(side=LEFT, padx=10, pady=10)
+        Button(user_win, text="Add User", command=add_user, bg=THEMES[self.theme_name]["accent"], fg="white").pack(side=LEFT, padx=10, pady=10)
+        Button(user_win, text="Delete User", command=delete_user, bg=THEMES[self.theme_name]["danger"], fg="white").pack(side=LEFT, padx=10, pady=10)
+
         
         load_users()
     
@@ -962,8 +1151,9 @@ class MainApp:
                 load_categories()
                 self.load_categories()
         
-        Button(cat_win, text="Add Category", command=add_category, bg="#4CAF50", fg="white").pack(side=LEFT, padx=10, pady=10)
-        Button(cat_win, text="Delete Category", command=delete_category, bg="#f44336", fg="white").pack(side=LEFT, padx=10, pady=10)
+        Button(cat_win, text="Add Category", command=add_category, bg=THEMES[self.theme_name]["accent"], fg="white").pack(side=LEFT, padx=10, pady=10)
+        Button(cat_win, text="Delete Category", command=delete_category, bg=THEMES[self.theme_name]["danger"], fg="white").pack(side=LEFT, padx=10, pady=10)
+
         
         load_categories()
     
