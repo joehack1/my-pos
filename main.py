@@ -337,13 +337,14 @@ class MainApp:
         self.root.config(menu=menubar)
 
         # Theme menu
+        self.theme_var = StringVar(value=self.theme_name)
         theme_menu = Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Theme", menu=theme_menu)
         for name in THEMES.keys():
             theme_menu.add_radiobutton(
                 label=name,
                 value=name,
-                variable=StringVar(value=self.theme_name),
+                variable=self.theme_var,
                 command=lambda n=name: self.set_theme(n)
             )
 
@@ -375,6 +376,8 @@ class MainApp:
             return
         self.theme_name = theme_name
         t = THEMES[theme_name]
+        if hasattr(self, "theme_var"):
+            self.theme_var.set(theme_name)
 
         # Root background
         self.root.configure(bg=t["root_bg"])
@@ -382,24 +385,62 @@ class MainApp:
         # ttk themes (custom styles)
         apply_ttk_theme(self.style, theme_name)
 
-        # Update commonly-used widget styles if they exist
-        # (widgets are stored as attributes in setup_main_interface)
-        for w in (getattr(self, "total_label", None),):
-            if w is not None:
-                w.configure(bg=t["frame_bg"], fg=t["label_fg"])
+        # Fill every Tk container/label area so the selected theme covers
+        # whole panels instead of leaving default-gray gaps between widgets.
+        self.apply_theme_to_widget(self.root, t)
 
-        # Treeviews
-        for tv in (getattr(self, "product_tree", None), getattr(self, "cart_tree", None)):
-            if tv is not None:
-                tv.configure(style="Custom.Treeview")
+    def apply_theme_to_widget(self, widget, t):
+        try:
+            if isinstance(widget, (Tk, Toplevel)):
+                widget.configure(bg=t["root_bg"])
+            elif isinstance(widget, LabelFrame):
+                widget.configure(
+                    bg=t["labelframe_bg"],
+                    fg=t["labelframe_fg"],
+                    highlightbackground=t["tree_heading_bg"],
+                    highlightcolor=t["accent"],
+                )
+            elif isinstance(widget, Frame):
+                widget.configure(bg=t["frame_bg"])
+            elif isinstance(widget, Label):
+                widget.configure(bg=t["frame_bg"], fg=t["label_fg"])
+            elif isinstance(widget, Entry):
+                widget.configure(
+                    bg=t["entry_bg"],
+                    fg=t["entry_fg"],
+                    insertbackground=t["entry_fg"],
+                    highlightbackground=t["tree_heading_bg"],
+                    highlightcolor=t["accent"],
+                )
+            elif isinstance(widget, Button):
+                color_role = self.get_theme_color_role(widget)
+                if color_role:
+                    widget.configure(bg=t[color_role], fg="white")
+                widget.configure(activebackground=t["accent"], activeforeground="white")
+            elif isinstance(widget, ttk.Treeview):
+                widget.configure(style="Custom.Treeview")
+            elif isinstance(widget, ttk.Combobox):
+                widget.configure(style="Custom.TCombobox")
+        except TclError:
+            pass
 
-        # Combobox
-        if getattr(self, "category_combo", None) is not None:
-            self.category_combo.configure(style="Custom.TCombobox")
+        for child in widget.winfo_children():
+            self.apply_theme_to_widget(child, t)
 
-        # Status bar
-        if getattr(self, "status_bar", None) is not None:
-            self.status_bar.configure(bg=t["frame_bg"], fg=t["label_fg"])
+    def get_theme_color_role(self, widget):
+        try:
+            current_rgb = widget.winfo_rgb(widget.cget("bg"))
+        except TclError:
+            return None
+
+        for role in ("accent", "accent2", "danger", "warning", "info"):
+            for theme in THEMES.values():
+                try:
+                    if current_rgb == widget.winfo_rgb(theme[role]):
+                        return role
+                except TclError:
+                    continue
+        return None
 
     def set_theme(self, theme_name: str):
         self.apply_theme(theme_name)
@@ -495,7 +536,7 @@ class MainApp:
         Button(btn_frame, text="Clear Cart", command=self.clear_cart, 
                bg=THEMES[self.theme_name]["warning"], fg="white").pack(side=LEFT, padx=5)
         Button(btn_frame, text="Update Quantity", command=self.update_quantity, 
-               bg=THEMES[self.theme_name]["warning"], fg=t["label_fg"]).pack(side=LEFT, padx=5)
+               bg=THEMES[self.theme_name]["warning"], fg="white").pack(side=LEFT, padx=5)
 
         
         # Total and checkout
