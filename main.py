@@ -272,9 +272,32 @@ class LoginWindow:
                           bg=THEMES["Dark"]["accent"], fg="white", padx=20, pady=5)
 
         login_btn.grid(row=3, column=0, columnspan=2, pady=20)
+        self.apply_login_theme()
         
         # Bind Enter key
         self.root.bind('<Return>', lambda event: self.login())
+
+    def apply_login_theme(self):
+        t = THEMES["Dark"]
+        self.root.configure(bg=t["root_bg"])
+        self.login_frame.configure(bg=t["frame_bg"])
+
+        for widget in self.login_frame.winfo_children():
+            try:
+                if isinstance(widget, Label):
+                    widget.configure(bg=t["frame_bg"], fg=t["label_fg"])
+                elif isinstance(widget, Entry):
+                    widget.configure(
+                        bg=t["entry_bg"],
+                        fg=t["entry_fg"],
+                        insertbackground=t["entry_fg"],
+                        highlightbackground=t["tree_heading_bg"],
+                        highlightcolor=t["accent"],
+                    )
+                elif isinstance(widget, Button):
+                    widget.configure(activebackground=t["accent"], activeforeground="white")
+            except TclError:
+                pass
     
     def center_window(self):
         self.root.update_idletasks()
