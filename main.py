@@ -34,8 +34,8 @@ THEMES = {
         "info": "#9C27B0",
         "tree_bg": "#1E1E1E",
         "tree_fg": "#EAEAEA",
-        "tree_heading_bg": "#2A2A2A",
-        "tree_heading_fg": "#EAEAEA",
+        "tree_heading_bg": "#CCCCCC",
+        "tree_heading_fg": "#000000",
         "tree_select_bg": "#3949AB",
     },
     "Light": {
@@ -56,7 +56,7 @@ THEMES = {
         "tree_bg": "#FFFFFF",
         "tree_fg": "#111111",
         "tree_heading_bg": "#E0E0E0",
-        "tree_heading_fg": "#111111",
+        "tree_heading_fg": "#000000",
         "tree_select_bg": "#B3D4FC",
     },
     "Blue": {
@@ -76,8 +76,8 @@ THEMES = {
         "info": "#7C4DFF",
         "tree_bg": "#12315E",
         "tree_fg": "#EAF2FF",
-        "tree_heading_bg": "#1B3F78",
-        "tree_heading_fg": "#EAF2FF",
+        "tree_heading_bg": "#A0C0FF",
+        "tree_heading_fg": "#000000",
         "tree_select_bg": "#1E5CBF",
     },
     "Mint": {
@@ -97,8 +97,8 @@ THEMES = {
         "info": "#3498DB",
         "tree_bg": "#0B3A2E",
         "tree_fg": "#E9FFF6",
-        "tree_heading_bg": "#11624E",
-        "tree_heading_fg": "#E9FFF6",
+        "tree_heading_bg": "#B4EEB4",
+        "tree_heading_fg": "#000000",
         "tree_select_bg": "#2D9CDB",
     },
 }
@@ -106,6 +106,12 @@ THEMES = {
 
 def apply_ttk_theme(style: ttk.Style, theme_name: str):
     t = THEMES[theme_name]
+    
+    # Force 'clam' theme to allow custom colors on Treeview headings
+    try:
+        style.theme_use('clam')
+    except:
+        pass
 
     # Treeview styling
     style.configure("Custom.Treeview",
@@ -117,6 +123,7 @@ def apply_ttk_theme(style: ttk.Style, theme_name: str):
     style.configure("Custom.Treeview.Heading",
                     background=t["tree_heading_bg"],
                     foreground=t["tree_heading_fg"],
+                    font=("Arial", 10, "bold"),
                     relief="flat")
 
     style.map("Custom.Treeview",
@@ -1010,7 +1017,6 @@ class MainApp:
         
         if low_stock_items:
             Label(report_win, text=f"⚠ Low Stock Items: {', '.join(low_stock_items)}", 
-                  fg="red", font=("Arial", 10, "bold")).pack(pady=5)
                   fg=THEMES[self.theme_name]["danger"], font=("Arial", 10, "bold")).pack(pady=5)
         self.apply_theme_to_widget(report_win, THEMES[self.theme_name])
     

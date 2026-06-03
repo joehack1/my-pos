@@ -3,3 +3,4 @@
 - [x] Replace hardcoded button/frame colors with palette-driven colors
 - [x] Configure ttk.Style for Treeview/Combobox to match each theme
 - [x] Verify UI elements (login, cart, reports popups) remain readable in each theme
+- [x] Ensure Treeview column headings have high-visibility black text
