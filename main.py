@@ -237,12 +237,13 @@ class Database:
         self.conn.close()
 
 class LoginWindow:
-    def __init__(self, root):
+    def __init__(self, root, theme_name="Dark"):
         self.root = root
+        self.theme_name = theme_name
         self.root.title("myPOS - Login")
         self.root.geometry("400x300")
         self.root.resizable(False, False)
-        
+
         self.db = Database()
         
         # Center the window
@@ -269,16 +270,16 @@ class LoginWindow:
         
         # Login button
         login_btn = Button(self.login_frame, text="Login", font=("Arial", 12), command=self.login, 
-                          bg=THEMES["Dark"]["accent"], fg="white", padx=20, pady=5)
+                          bg=THEMES[self.theme_name]["accent"], fg="white", padx=20, pady=5)
 
         login_btn.grid(row=3, column=0, columnspan=2, pady=20)
-        self.apply_login_theme()
+        self.apply_login_theme(self.theme_name)
         
         # Bind Enter key
         self.root.bind('<Return>', lambda event: self.login())
 
-    def apply_login_theme(self):
-        t = THEMES["Dark"]
+    def apply_login_theme(self, theme_name):
+        t = THEMES[theme_name]
         self.root.configure(bg=t["root_bg"])
         self.login_frame.configure(bg=t["frame_bg"])
 
@@ -318,13 +319,13 @@ class LoginWindow:
             self.db.close()
             self.root.destroy()
             main_root = Tk()
-            MainApp(main_root, user)
+            MainApp(main_root, user, self.theme_name)
             main_root.mainloop()
         else:
             messagebox.showerror("Error", "Invalid username or password!")
 
 class MainApp:
-    def __init__(self, root, user):
+    def __init__(self, root, user, theme_name="Dark"):
         self.root = root
         self.user = user
         self.user_id, self.username, self.role, self.full_name = user
@@ -336,7 +337,7 @@ class MainApp:
         self.cart = []
 
         # Theme state
-        self.theme_name = "Dark"
+        self.theme_name = theme_name
         self.style = ttk.Style(self.root)
 
         # Base tk background for login/main widgets
@@ -822,6 +823,8 @@ class MainApp:
         Button(checkout_win, text="Complete Sale", command=complete_sale, 
                bg=THEMES[self.theme_name]["accent"], fg="white", font=("Arial", 12), padx=20, pady=10).pack(pady=20)
 
+        self.apply_theme_to_widget(checkout_win, THEMES[self.theme_name])
+
     
     def generate_receipt(self, invoice_no, sale_id):
         # Get sale details
@@ -936,6 +939,7 @@ class MainApp:
             change_win.destroy()
         
         Button(change_win, text="Change Password", command=change, bg=THEMES[self.theme_name]["accent"], fg="white").pack(pady=20)
+        self.apply_theme_to_widget(change_win, THEMES[self.theme_name])
 
     
     def daily_sales_report(self):
@@ -971,6 +975,7 @@ class MainApp:
         
         Label(report_win, text=f"Total Sales Today: ${total_sales:.2f}", 
               font=("Arial", 14, "bold")).pack(pady=10)
+        self.apply_theme_to_widget(report_win, THEMES[self.theme_name])
     
     def inventory_report(self):
         report_win = Toplevel(self.root)
@@ -1006,6 +1011,8 @@ class MainApp:
         if low_stock_items:
             Label(report_win, text=f"⚠ Low Stock Items: {', '.join(low_stock_items)}", 
                   fg="red", font=("Arial", 10, "bold")).pack(pady=5)
+                  fg=THEMES[self.theme_name]["danger"], font=("Arial", 10, "bold")).pack(pady=5)
+        self.apply_theme_to_widget(report_win, THEMES[self.theme_name])
     
     def sales_history(self):
         history_win = Toplevel(self.root)
@@ -1068,6 +1075,7 @@ class MainApp:
         Button(filter_frame, text="Reprint Selected", command=reprint_receipt, bg=THEMES[self.theme_name]["warning"], fg="white").pack(side=LEFT, padx=10)
 
         load_history()
+        self.apply_theme_to_widget(history_win, THEMES[self.theme_name])
     
     def user_management(self):
         if self.role != "admin":
@@ -1134,8 +1142,9 @@ class MainApp:
                 except sqlite3.IntegrityError:
                     messagebox.showerror("Error", "Username already exists!")
             
-            Button(add_win, text="Save", command=save_user, bg="#4CAF50", fg="white").pack(pady=20)
-        
+            Button(add_win, text="Save", command=save_user, bg=THEMES[self.theme_name]["accent"], fg="white").pack(pady=20)
+            self.apply_theme_to_widget(add_win, THEMES[self.theme_name])
+
         def delete_user():
             selected = tree.selection()
             if not selected:
@@ -1156,6 +1165,7 @@ class MainApp:
 
         
         load_users()
+        self.apply_theme_to_widget(user_win, THEMES[self.theme_name])
     
     def category_management(self):
         if self.role != "admin":
@@ -1220,16 +1230,17 @@ class MainApp:
 
         
         load_categories()
+        self.apply_theme_to_widget(cat_win, THEMES[self.theme_name])
     
     def logout(self):
         if messagebox.askyesno("Confirm", "Logout?"):
             self.db.close()
             self.root.destroy()
             login_root = Tk()
-            LoginWindow(login_root)
+            LoginWindow(login_root, self.theme_name)
             login_root.mainloop()
 
 if __name__ == "__main__":
     root = Tk()
-    LoginWindow(root)
+    LoginWindow(root, "Dark")
     root.mainloop()
