@@ -539,8 +539,15 @@ class MainApp:
         self.product_tree.bind('<Double-Button-1>', lambda e: self.add_to_cart())
         
         # Right panel - Cart
-        right_frame = Frame(main_frame, width=500)
-        right_frame.pack(side=RIGHT, fill=BOTH, expand=True, padx=(5, 0))
+        right_frame = Frame(main_frame, width=400)
+        right_frame.pack(side=LEFT, fill=BOTH, expand=True, padx=(5, 5))
+
+        # Tools panel (Calculator & Converter)
+        tools_frame = Frame(main_frame, width=200)
+        tools_frame.pack(side=RIGHT, fill=Y, padx=(5, 0))
+        
+        self.setup_calculator(tools_frame)
+        self.setup_currency_converter(tools_frame)
         
         # Cart title
         cart_title = Label(right_frame, text="Shopping Cart", font=("Arial", 16, "bold"))
@@ -592,6 +599,80 @@ class MainApp:
         self.status_bar = Label(self.root, text="Ready", bd=1, relief=SUNKEN, anchor=W)
         self.status_bar.pack(side=BOTTOM, fill=X)
     
+    def setup_calculator(self, parent):
+        calc_frame = LabelFrame(parent, text="Calculator", padx=5, pady=5)
+        calc_frame.pack(fill=X, pady=(0, 10))
+        
+        self.calc_display = Entry(calc_frame, font=("Arial", 12), justify=RIGHT)
+        self.calc_display.pack(fill=X, pady=5)
+        
+        btns_frame = Frame(calc_frame)
+        btns_frame.pack()
+        
+        buttons = [
+            '7', '8', '9', '/',
+            '4', '5', '6', '*',
+            '1', '2', '3', '-',
+            'C', '0', '=', '+'
+        ]
+        
+        r, c = 0, 0
+        for btn in buttons:
+            Button(btns_frame, text=btn, width=4, height=1, 
+                   command=lambda b=btn: self.calc_press(b)).grid(row=r, column=c, padx=1, pady=1)
+            c += 1
+            if c > 3:
+                c = 0
+                r += 1
+
+    def calc_press(self, char):
+        if char == '=':
+            try:
+                expr = self.calc_display.get()
+                if not all(c in "0123456789+-*/. " for c in expr): return
+                res = eval(expr)
+                self.calc_display.delete(0, END)
+                self.calc_display.insert(0, f"{res:g}")
+            except:
+                self.calc_display.delete(0, END)
+                self.calc_display.insert(0, "Error")
+        elif char == 'C':
+            self.calc_display.delete(0, END)
+        else:
+            self.calc_display.insert(END, char)
+
+    def setup_currency_converter(self, parent):
+        conv_frame = LabelFrame(parent, text="Currency Conv", padx=5, pady=5)
+        conv_frame.pack(fill=X)
+        
+        self.rates = {"USD": 1.0, "EUR": 0.92, "GBP": 0.79, "JPY": 150.0}
+        
+        Label(conv_frame, text="Amt:").grid(row=0, column=0, sticky=W)
+        self.conv_amt = Entry(conv_frame, width=15)
+        self.conv_amt.grid(row=0, column=1, pady=2)
+        
+        self.from_cur = ttk.Combobox(conv_frame, values=list(self.rates.keys()), width=5, state="readonly")
+        self.from_cur.set("USD")
+        self.from_cur.grid(row=1, column=0, pady=2)
+        
+        self.to_cur = ttk.Combobox(conv_frame, values=list(self.rates.keys()), width=5, state="readonly")
+        self.to_cur.set("EUR")
+        self.to_cur.grid(row=1, column=1, pady=2)
+        
+        self.conv_res = Label(conv_frame, text="Res: 0.00", font=("Arial", 9, "bold"))
+        self.conv_res.grid(row=2, column=0, columnspan=2, pady=5)
+        
+        Button(conv_frame, text="Convert", command=self.convert_currency, 
+               bg=THEMES[self.theme_name]["accent2"], fg="white").grid(row=3, column=0, columnspan=2, sticky=EW)
+
+    def convert_currency(self):
+        try:
+            amt = float(self.conv_amt.get())
+            res = (amt / self.rates[self.from_cur.get()]) * self.rates[self.to_cur.get()]
+            self.conv_res.config(text=f"Res: {res:.2f} {self.to_cur.get()}")
+        except:
+            self.conv_res.config(text="Invalid Input")
+
     def load_categories(self):
         categories = self.db.fetch_all("SELECT name FROM categories ORDER BY name")
         category_list = ["All"] + [cat[0] for cat in categories]
@@ -849,56 +930,63 @@ class MainApp:
         
         # Create PDF receipt
         filename = f"receipt_{invoice_no}.pdf"
-        doc = SimpleDocTemplate(filename, pagesize=letter)
+        # Using a standard 80mm (approx 3.15 inch) receipt width
+        doc = SimpleDocTemplate(filename, pagesize=(3.2 * inch, 6 * inch), rightMargin=10, leftMargin=10, topMargin=10, bottomMargin=10)
         story = []
         
         styles = getSampleStyleSheet()
-        title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=24, alignment=1, spaceAfter=30)
-        header_style = ParagraphStyle('Header', parent=styles['Normal'], fontSize=12, alignment=1)
+        title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=16, alignment=1, spaceAfter=5)
+        header_style = ParagraphStyle('Header', parent=styles['Normal'], fontSize=9, alignment=1)
+        item_style = ParagraphStyle('Item', parent=styles['Normal'], fontSize=8)
+        info_style = ParagraphStyle('Info', parent=styles['Normal'], fontSize=8, alignment=0)
+        total_style = ParagraphStyle('Total', parent=styles['Normal'], fontSize=10, alignment=2, fontName='Helvetica-Bold')
         
         # Header
         story.append(Paragraph("myPOS System", title_style))
-        story.append(Paragraph("Your Store Name Here", header_style))
         story.append(Paragraph("123 Business Street, City", header_style))
         story.append(Paragraph("Tel: (555) 123-4567", header_style))
-        story.append(Spacer(1, 20))
+        story.append(Paragraph("-" * 45, header_style))
+        story.append(Spacer(1, 5))
         
         # Receipt info
-        story.append(Paragraph(f"Invoice: {invoice_no}", styles['Normal']))
-        story.append(Paragraph(f"Date: {sale[6]}", styles['Normal']))
-        story.append(Paragraph(f"Cashier: {self.full_name}", styles['Normal']))
-        story.append(Spacer(1, 20))
+        story.append(Paragraph(f"Invoice: {invoice_no}", info_style))
+        story.append(Paragraph(f"Date: {sale[6][:19]}", info_style))
+        story.append(Paragraph(f"Cashier: {self.full_name}", info_style))
+        story.append(Spacer(1, 10))
         
         # Items table
         data = [["Item", "Qty", "Price", "Total"]]
         for item in items:
-            data.append([item[0], str(item[1]), f"${item[2]:.2f}", f"${item[3]:.2f}"])
+            # Truncate long names for receipt
+            name = item[0][:15] + ".." if len(item[0]) > 15 else item[0]
+            data.append([name, str(item[1]), f"{item[2]:.2f}", f"{item[3]:.2f}"])
         
-        table = Table(data)
+        table = Table(data, colWidths=[1.1*inch, 0.4*inch, 0.6*inch, 0.7*inch])
         table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+            ('ALIGN', (2, 0), (3, -1), 'RIGHT'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 12),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ('FONTSIZE', (0, 0), (-1, -1), 8),
+            ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
+            ('LINEBELOW', (0, -1), (-1, -1), 1, colors.black),
         ]))
         
         story.append(table)
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 10))
         
         # Totals
-        story.append(Paragraph(f"Total: ${sale[3]:.2f}", styles['Normal']))
-        story.append(Paragraph(f"Paid: ${sale[4]:.2f}", styles['Normal']))
-        story.append(Paragraph(f"Change: ${sale[5]:.2f}", styles['Normal']))
-        story.append(Paragraph(f"Payment: {sale[7]}", styles['Normal']))
-        story.append(Spacer(1, 20))
+        story.append(Paragraph(f"TOTAL: ${sale[3]:.2f}", total_style))
+        story.append(Paragraph(f"Paid: ${sale[4]:.2f}", info_style))
+        story.append(Paragraph(f"Change: ${sale[5]:.2f}", info_style))
+        story.append(Paragraph(f"Method: {sale[7]}", info_style))
+        story.append(Spacer(1, 15))
         
         # Footer
-        story.append(Paragraph("Thank you for shopping with us!", styles['Normal']))
-        story.append(Paragraph("Have a great day!", styles['Normal']))
+        story.append(Paragraph("-" * 45, header_style))
+        story.append(Paragraph("Thank you for shopping!", header_style))
+        story.append(Paragraph("Keep your receipt for returns.", header_style))
         
         doc.build(story)
         self.status_bar.config(text=f"Receipt saved: {filename}")
