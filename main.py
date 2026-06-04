@@ -147,6 +147,12 @@ class Database:
         self.conn = sqlite3.connect(db_name)
         self.cursor = self.conn.cursor()
         self.create_tables()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
     
     def create_tables(self):
         # Users table
@@ -642,7 +648,7 @@ class MainApp:
         # Explicitly cast types to ensure arithmetic and comparisons work
         product_id = int(values[0])
         name = str(values[2])
-        price = float(values[3])
+        price = Decimal(str(values[3]))
         stock = int(values[4])
         
         if stock <= 0:
@@ -656,7 +662,7 @@ class MainApp:
                     messagebox.showwarning("Warning", f"Only {stock} units available!")
                     return
                 cart_item['quantity'] += 1
-                cart_item['total'] = cart_item['quantity'] * cart_item['price']
+                cart_item['total'] = Decimal(str(cart_item['quantity'])) * cart_item['price']
                 self.update_cart_display()
                 self.update_total()
                 self.status_bar.config(text=f"Added {name} to cart")
@@ -687,7 +693,7 @@ class MainApp:
                                                    f"${item['price']:.2f}", f"${item['total']:.2f}"))
     
     def update_total(self):
-        total = sum(item['total'] for item in self.cart)
+        total = sum(item['total'] for item in self.cart) if self.cart else Decimal('0.00')
         self.total_label.config(text=f"Total: ${total:.2f}")
         return total
     
@@ -724,7 +730,7 @@ class MainApp:
         
         if new_qty:
             item['quantity'] = new_qty
-            item['total'] = item['quantity'] * item['price']
+            item['total'] = Decimal(str(item['quantity'])) * item['price']
             self.update_cart_display()
             self.update_total()
             self.status_bar.config(text=f"Updated {item['name']} quantity to {new_qty}")
@@ -769,11 +775,9 @@ class MainApp:
         def calculate_change(*args):
             try:
                 val = paid_entry.get()
-                if not val:
-                    val = "0"
-                paid = float(val)
+                paid = Decimal(val) if val else Decimal('0.00')
                 change = paid - total
-                change_label.config(text=f"Change: ${change:.2f}" if change >= 0 else f"Short: ${-change:.2f}")
+                change_label.config(text=f"Change: ${change:.2f}" if change >= 0 else f"Short: ${abs(change):.2f}")
             except:
                 change_label.config(text="Change: $0.00")
         
@@ -781,7 +785,7 @@ class MainApp:
         
         def complete_sale():
             try:
-                paid = float(paid_entry.get())
+                paid = Decimal(paid_entry.get())
                 if paid < total:
                     messagebox.showerror("Error", "Insufficient payment amount!")
                     return
@@ -796,7 +800,7 @@ class MainApp:
                 self.db.execute_query("""
                     INSERT INTO sales (invoice_no, user_id, total, paid, change, payment_method)
                     VALUES (?, ?, ?, ?, ?, ?)
-                """, (invoice_no, self.user_id, total, paid, change, payment_method))
+                """, (invoice_no, self.user_id, float(total), float(paid), float(change), payment_method))
                 
                 sale_id = self.db.cursor.lastrowid
                 
@@ -805,7 +809,7 @@ class MainApp:
                     self.db.execute_query("""
                         INSERT INTO sale_items (sale_id, product_id, quantity, price, total)
                         VALUES (?, ?, ?, ?, ?)
-                    """, (sale_id, item['id'], item['quantity'], item['price'], item['total']))
+                    """, (sale_id, item['id'], item['quantity'], float(item['price']), float(item['total'])))
                     
                     # Update stock
                     self.db.execute_query("""
