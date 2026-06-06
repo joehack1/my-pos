@@ -329,13 +329,32 @@ class LoginWindow:
                                  (username, password))
         
         if user:
-            self.db.close()
-            self.root.destroy()
-            main_root = Tk()
-            MainApp(main_root, user, self.theme_name)
-            main_root.mainloop()
+            # Start Welcome Animation/Transition
+            for widget in self.login_frame.winfo_children():
+                widget.destroy()
+            
+            t = THEMES[self.theme_name]
+            Label(self.login_frame, text="Welcome to myPOS", font=("Arial", 22, "bold"), 
+                  bg=t["frame_bg"], fg=t["accent"]).pack(pady=(50, 10))
+            
+            Label(self.login_frame, text=user[3], font=("Arial", 14), 
+                  bg=t["frame_bg"], fg=t["label_fg"]).pack(pady=5)
+            
+            status = Label(self.login_frame, text="Initializing system...", font=("Arial", 10, "italic"), 
+                          bg=t["frame_bg"], fg=t["label_fg"])
+            status.pack(pady=30)
+            
+            # Delay for 1.5 seconds to show the animation before launching
+            self.root.after(1500, lambda: self.start_main_app(user))
         else:
             messagebox.showerror("Error", "Invalid username or password!")
+
+    def start_main_app(self, user):
+        self.db.close()
+        self.root.destroy()
+        main_root = Tk()
+        MainApp(main_root, user, self.theme_name)
+        main_root.mainloop()
 
 class MainApp:
     def __init__(self, root, user, theme_name="Dark"):
