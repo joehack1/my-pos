@@ -28,6 +28,7 @@ THEMES = {
         "labelframe_bg": "#1E1E1E",
         "labelframe_fg": "#EAEAEA",
         "accent": "#4CAF50",
+        "accent_hover": "#66BB6A",
         "accent2": "#2196F3",
         "danger": "#f44336",
         "warning": "#FF9800",
@@ -49,6 +50,7 @@ THEMES = {
         "labelframe_bg": "#FFFFFF",
         "labelframe_fg": "#111111",
         "accent": "#4CAF50",
+        "accent_hover": "#66BB6A",
         "accent2": "#2196F3",
         "danger": "#f44336",
         "warning": "#FF9800",
@@ -70,6 +72,7 @@ THEMES = {
         "labelframe_bg": "#12315E",
         "labelframe_fg": "#EAF2FF",
         "accent": "#2E7DFF",
+        "accent_hover": "#5E97FF",
         "accent2": "#00BCD4",
         "danger": "#FF5252",
         "warning": "#FFC107",
@@ -91,6 +94,7 @@ THEMES = {
         "labelframe_bg": "#0B3A2E",
         "labelframe_fg": "#E9FFF6",
         "accent": "#2ECC71",
+        "accent_hover": "#58D68D",
         "accent2": "#1ABC9C",
         "danger": "#E74C3C",
         "warning": "#F39C12",
@@ -288,6 +292,14 @@ class LoginWindow:
         login_btn.grid(row=3, column=0, columnspan=2, pady=20)
         self.apply_login_theme(self.theme_name)
         
+        # Hover effect for login button
+        def on_enter(e):
+            login_btn.config(bg=THEMES[self.theme_name]["accent_hover"])
+        def on_leave(e):
+            login_btn.config(bg=THEMES[self.theme_name]["accent"])
+        login_btn.bind("<Enter>", on_enter)
+        login_btn.bind("<Leave>", on_leave)
+
         # Bind Enter key
         self.root.bind('<Return>', lambda event: self.login())
 
@@ -472,6 +484,21 @@ class MainApp:
                 color_role = self.get_theme_color_role(widget)
                 if color_role:
                     widget.configure(bg=t[color_role], fg="white")
+                    # Bind hover effects for buttons
+                    def make_on_enter(w, role):
+                        # Use accent_hover for primary accent, or a generic lighten for others
+                        hover_color = t.get(f"{role}_hover")
+                        if not hover_color:
+                            # Fallback logic if no specific hover color defined
+                            hover_color = t["accent_hover"] if role == "accent" else t[role]
+                        return lambda e: w.configure(bg=hover_color)
+                    
+                    def make_on_leave(w, role):
+                        return lambda e: w.configure(bg=t[role])
+                    
+                    widget.bind("<Enter>", make_on_enter(widget, color_role))
+                    widget.bind("<Leave>", make_on_leave(widget, color_role))
+                
                 widget.configure(activebackground=t["accent"], activeforeground="white")
             elif isinstance(widget, ttk.Treeview):
                 widget.configure(style="Custom.Treeview")
@@ -523,13 +550,13 @@ class MainApp:
         # Search
         search_frame = Frame(filter_frame)
         search_frame.pack(side=RIGHT)
-        Label(search_frame, text="Search:").pack(side=LEFT)
+        Label(search_frame, text="🔍 Search:").pack(side=LEFT)
         self.search_entry = Entry(search_frame, width=20)
         self.search_entry.pack(side=LEFT, padx=5)
         self.search_entry.bind('<KeyRelease>', lambda e: self.load_products())
         
         # Products list
-        products_frame = LabelFrame(left_frame, text="Products", padx=5, pady=5)
+        products_frame = LabelFrame(left_frame, text="Available Products", padx=5, pady=5)
         products_frame.pack(fill=BOTH, expand=True)
         
         # Product tree
@@ -549,7 +576,7 @@ class MainApp:
         scrollbar.pack(side=RIGHT, fill=Y)
         
         # Add to cart button
-        add_btn = Button(left_frame, text="Add to Cart", command=self.add_to_cart, 
+        add_btn = Button(left_frame, text="Add to Cart 🛒", command=self.add_to_cart, 
                         bg=THEMES[self.theme_name]["accent2"], fg="white", font=("Arial", 12), padx=20, pady=5)
 
         add_btn.pack(pady=10)
@@ -567,11 +594,11 @@ class MainApp:
         
         self.setup_calculator(tools_frame)
         self.setup_currency_converter(tools_frame)
+        self.setup_clock(tools_frame)
         
         # Cart title
-        cart_title = Label(right_frame, text="Shopping Cart", font=("Arial", 16, "bold"))
-        cart_title.pack()
-        
+        Label(right_frame, text="🛒 Shopping Cart", font=("Arial", 16, "bold")).pack(pady=(0, 5))
+
         # Cart items
         cart_frame = Frame(right_frame)
         cart_frame.pack(fill=BOTH, expand=True, pady=10)
@@ -594,11 +621,11 @@ class MainApp:
         btn_frame = Frame(right_frame)
         btn_frame.pack(fill=X, pady=5)
         
-        Button(btn_frame, text="Remove Selected", command=self.remove_from_cart, 
+        Button(btn_frame, text="Remove 🗑️", command=self.remove_from_cart, 
                bg=THEMES[self.theme_name]["danger"], fg="white").pack(side=LEFT, padx=5)
-        Button(btn_frame, text="Clear Cart", command=self.clear_cart, 
+        Button(btn_frame, text="Clear 🔄", command=self.clear_cart, 
                bg=THEMES[self.theme_name]["warning"], fg="white").pack(side=LEFT, padx=5)
-        Button(btn_frame, text="Update Quantity", command=self.update_quantity, 
+        Button(btn_frame, text="Update Qty 📝", command=self.update_quantity, 
                bg=THEMES[self.theme_name]["warning"], fg="white").pack(side=LEFT, padx=5)
 
         
@@ -609,7 +636,7 @@ class MainApp:
         self.total_label = Label(total_frame, text="Total: $0.00", font=("Arial", 18, "bold"))
         self.total_label.pack()
         
-        checkout_btn = Button(total_frame, text="Checkout", command=self.checkout,
+        checkout_btn = Button(total_frame, text="Checkout 💳", command=self.checkout,
                              bg=THEMES[self.theme_name]["accent"], fg="white", font=("Arial", 14), padx=40, pady=10)
 
         checkout_btn.pack(pady=10)
@@ -617,6 +644,16 @@ class MainApp:
         # Status bar
         self.status_bar = Label(self.root, text="Ready", bd=1, relief=SUNKEN, anchor=W)
         self.status_bar.pack(side=BOTTOM, fill=X)
+
+    def setup_clock(self, parent):
+        clock_frame = LabelFrame(parent, text="System Time", padx=5, pady=5)
+        clock_frame.pack(fill=X, pady=10)
+        self.clock_label = Label(clock_frame, text="", font=("Arial", 10))
+        self.clock_label.pack()
+        def update_time():
+            self.clock_label.config(text=datetime.datetime.now().strftime("%H:%M:%S\n%Y-%m-%d"))
+            self.root.after(1000, update_time)
+        update_time()
     
     def setup_calculator(self, parent):
         calc_frame = LabelFrame(parent, text="Calculator", padx=5, pady=5)
