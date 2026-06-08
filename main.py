@@ -325,7 +325,7 @@ class LoginWindow:
             except TclError:
                 pass
     
-    def center_window(self):
+    def center_window(self): 
         self.root.update_idletasks()
         width = 400
         height = 300
