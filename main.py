@@ -225,13 +225,12 @@ class Database:
             )
         ''')
         
-        # Insert default admin user if not exists
-        admin_pass = hashlib.sha256("admin123".encode()).hexdigest()
-        self.cursor.execute("INSERT OR IGNORE INTO users (username, password, role, full_name) VALUES (?, ?, ?, ?)",
-                           ("admin", admin_pass, "admin", "System Administrator"))
-        
+        # SECURITY: do NOT insert a hardcoded default admin password.
+        # The database must already contain an admin account, or be created/seeded externally.
+
         # Insert default categories
         default_categories = ["Beverages", "Snacks", "Dairy", "Vegetables", "Fruits", "Cleaning", "Personal Care"]
+
         for cat in default_categories:
             self.cursor.execute("INSERT OR IGNORE INTO categories (name) VALUES (?)", (cat,))
         
@@ -684,18 +683,68 @@ class MainApp:
     def calc_press(self, char):
         if char == '=':
             try:
-                expr = self.calc_display.get()
-                if not all(c in "0123456789+-*/. " for c in expr): return
-                res = eval(expr)
+                expr = self.calc_display.get().strip()
+
+                # Safe evaluator: only allow digits, operators, decimal points, parentheses, and whitespace.
+                # Then validate via AST and evaluate a strict whitelist.
+                import ast
+
+                if not expr:
+                    return
+
+                allowed_chars = set("0123456789+-*/(). ")
+                if any(ch not in allowed_chars for ch in expr):
+                    return
+
+                node = ast.parse(expr, mode='eval')
+
+                def eval_node(n):
+                    if isinstance(n, ast.Expression):
+                        return eval_node(n.body)
+
+                    # Numeric literals
+                    if isinstance(n, ast.Constant):
+                        if isinstance(n.value, (int, float)):
+                            return float(n.value)
+                        raise ValueError("Invalid literal")
+
+                    # Binary operations
+                    if isinstance(n, ast.BinOp):
+                        left = eval_node(n.left)
+                        right = eval_node(n.right)
+                        op = n.op
+                        if isinstance(op, ast.Add):
+                            return left + right
+                        if isinstance(op, ast.Sub):
+                            return left - right
+                        if isinstance(op, ast.Mult):
+                            return left * right
+                        if isinstance(op, ast.Div):
+                            return left / right
+                        raise ValueError("Invalid operator")
+
+                    # Unary operations (+/-)
+                    if isinstance(n, ast.UnaryOp):
+                        val = eval_node(n.operand)
+                        if isinstance(n.op, ast.UAdd):
+                            return val
+                        if isinstance(n.op, ast.USub):
+                            return -val
+                        raise ValueError("Invalid unary operator")
+
+                    raise ValueError("Disallowed expression")
+
+                res = eval_node(node)
                 self.calc_display.delete(0, END)
                 self.calc_display.insert(0, f"{res:g}")
-            except:
+            except Exception:
                 self.calc_display.delete(0, END)
                 self.calc_display.insert(0, "Error")
         elif char == 'C':
             self.calc_display.delete(0, END)
         else:
             self.calc_display.insert(END, char)
+
 
     def setup_currency_converter(self, parent):
         conv_frame = LabelFrame(parent, text="Currency Conv", padx=5, pady=5)
