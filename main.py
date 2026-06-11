@@ -285,12 +285,10 @@ class LoginWindow:
         self.password_entry.grid(row=2, column=1, pady=5)
         
         # Login button
-        login_btn = Button(self.login_frame, text="Login", font=("Arial", 12), command=self.login, 
         self.login_btn = Button(self.login_frame, text="Login", font=("Arial", 12), command=self.login, 
                           bg=THEMES[self.theme_name]["accent"], fg="white", padx=20, pady=5)
         self.login_btn.grid(row=3, column=0, pady=20, sticky=E, padx=(0, 5))
 
-        login_btn.grid(row=3, column=0, columnspan=2, pady=20)
         # Register button
         self.register_btn = Button(self.login_frame, text="Register", font=("Arial", 12), command=self.show_registration, 
                              bg=THEMES[self.theme_name]["accent2"], fg="white", padx=20, pady=5)
@@ -300,12 +298,8 @@ class LoginWindow:
         
         # Hover effect for login button
         def on_enter(e):
-            login_btn.config(bg=THEMES[self.theme_name]["accent_hover"])
             self.login_btn.config(bg=THEMES[self.theme_name]["accent_hover"])
         def on_leave(e):
-            login_btn.config(bg=THEMES[self.theme_name]["accent"])
-        login_btn.bind("<Enter>", on_enter)
-        login_btn.bind("<Leave>", on_leave)
             self.login_btn.config(bg=THEMES[self.theme_name]["accent"])
         self.login_btn.bind("<Enter>", on_enter)
         self.login_btn.bind("<Leave>", on_leave)
