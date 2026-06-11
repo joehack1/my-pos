@@ -286,18 +286,37 @@ class LoginWindow:
         
         # Login button
         login_btn = Button(self.login_frame, text="Login", font=("Arial", 12), command=self.login, 
+        self.login_btn = Button(self.login_frame, text="Login", font=("Arial", 12), command=self.login, 
                           bg=THEMES[self.theme_name]["accent"], fg="white", padx=20, pady=5)
+        self.login_btn.grid(row=3, column=0, pady=20, sticky=E, padx=(0, 5))
 
         login_btn.grid(row=3, column=0, columnspan=2, pady=20)
+        # Register button
+        self.register_btn = Button(self.login_frame, text="Register", font=("Arial", 12), command=self.show_registration, 
+                             bg=THEMES[self.theme_name]["accent2"], fg="white", padx=20, pady=5)
+        self.register_btn.grid(row=3, column=1, pady=20, sticky=W, padx=(5, 0))
+
         self.apply_login_theme(self.theme_name)
         
         # Hover effect for login button
         def on_enter(e):
             login_btn.config(bg=THEMES[self.theme_name]["accent_hover"])
+            self.login_btn.config(bg=THEMES[self.theme_name]["accent_hover"])
         def on_leave(e):
             login_btn.config(bg=THEMES[self.theme_name]["accent"])
         login_btn.bind("<Enter>", on_enter)
         login_btn.bind("<Leave>", on_leave)
+            self.login_btn.config(bg=THEMES[self.theme_name]["accent"])
+        self.login_btn.bind("<Enter>", on_enter)
+        self.login_btn.bind("<Leave>", on_leave)
+
+        # Hover effect for register button
+        def on_enter_reg(e):
+            self.register_btn.config(bg=THEMES[self.theme_name]["accent_hover"])
+        def on_leave_reg(e):
+            self.register_btn.config(bg=THEMES[self.theme_name]["accent2"])
+        self.register_btn.bind("<Enter>", on_enter_reg)
+        self.register_btn.bind("<Leave>", on_leave_reg)
 
         # Bind Enter key
         self.root.bind('<Return>', lambda event: self.login())
@@ -359,6 +378,63 @@ class LoginWindow:
             self.root.after(1500, lambda: self.start_main_app(user))
         else:
             messagebox.showerror("Error", "Invalid username or password!")
+
+    def show_registration(self):
+        reg_win = Toplevel(self.root)
+        reg_win.title("User Registration")
+        reg_win.geometry("400x450")
+        reg_win.resizable(False, False)
+        reg_win.transient(self.root)
+        reg_win.grab_set()
+
+        # Center window
+        reg_win.update_idletasks()
+        width, height = 400, 450
+        x = (reg_win.winfo_screenwidth() // 2) - (width // 2)
+        y = (reg_win.winfo_screenheight() // 2) - (height // 2)
+        reg_win.geometry(f'{width}x{height}+{x}+{y}')
+
+        t = THEMES[self.theme_name]
+        reg_win.configure(bg=t["root_bg"])
+
+        # Check if any users exist to determine role (First user = admin)
+        user_count = self.db.fetch_one("SELECT COUNT(*) FROM users")[0]
+        is_first_user = (user_count == 0)
+
+        Label(reg_win, text="Create Account", font=("Arial", 20, "bold"), bg=t["root_bg"], fg=t["accent"]).pack(pady=20)
+        if is_first_user:
+            Label(reg_win, text="First User: System will assign Admin role.", font=("Arial", 10, "italic"), bg=t["root_bg"], fg=t["warning"]).pack(pady=(0, 10))
+
+        fields_frame = Frame(reg_win, bg=t["root_bg"])
+        fields_frame.pack(padx=20, fill=X)
+
+        Label(fields_frame, text="Username:", bg=t["root_bg"], fg=t["label_fg"]).pack(anchor=W)
+        username_ent = Entry(fields_frame, font=("Arial", 12), bg=t["entry_bg"], fg=t["entry_fg"], insertbackground=t["entry_fg"])
+        username_ent.pack(fill=X, pady=(5, 15))
+
+        Label(fields_frame, text="Full Name:", bg=t["root_bg"], fg=t["label_fg"]).pack(anchor=W)
+        fullname_ent = Entry(fields_frame, font=("Arial", 12), bg=t["entry_bg"], fg=t["entry_fg"], insertbackground=t["entry_fg"])
+        fullname_ent.pack(fill=X, pady=(5, 15))
+
+        Label(fields_frame, text="Password:", bg=t["root_bg"], fg=t["label_fg"]).pack(anchor=W)
+        password_ent = Entry(fields_frame, font=("Arial", 12), show="*", bg=t["entry_bg"], fg=t["entry_fg"], insertbackground=t["entry_fg"])
+        password_ent.pack(fill=X, pady=(5, 15))
+
+        def register():
+            u, f, p = username_ent.get().strip(), fullname_ent.get().strip(), password_ent.get()
+            if not u or not p:
+                messagebox.showerror("Error", "Username and Password are required!", parent=reg_win)
+                return
+            role = "admin" if is_first_user else "cashier"
+            hashed_pw = hashlib.sha256(p.encode()).hexdigest()
+            try:
+                self.db.execute_query("INSERT INTO users (username, password, role, full_name) VALUES (?,?,?,?)", (u, hashed_pw, role, f))
+                messagebox.showinfo("Success", f"Account created as {role}!", parent=reg_win)
+                reg_win.destroy()
+            except sqlite3.IntegrityError:
+                messagebox.showerror("Error", "Username already exists!", parent=reg_win)
+
+        Button(reg_win, text="Register", font=("Arial", 12, "bold"), command=register, bg=t["accent"], fg="white", padx=30, pady=10).pack(pady=20)
 
     def start_main_app(self, user):
         self.db.close()
