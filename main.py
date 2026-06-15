@@ -1,156 +1,126 @@
-# main.py - Main application file
+# main.py — myPOS Liquid Glass Edition
+# Requires: pip install reportlab
+ 
 import sqlite3
 import datetime
 import hashlib
+import os
+import math
 from tkinter import *
 from tkinter import ttk, messagebox, simpledialog
-from tkinter import font as tkfont
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-import os
-from decimal import Decimal
-
-# -------------------------
-# Theme system (4 themes)
-# -------------------------
-THEMES = {
-    "Dark": {
-        "root_bg": "#121212",
-        "frame_bg": "#1E1E1E",
-        "label_bg": "#121212",
-        "label_fg": "#EAEAEA",
-        "entry_bg": "#2A2A2A",
-        "entry_fg": "#EAEAEA",
-        "card_bg": "#1E1E1E",
-        "labelframe_bg": "#1E1E1E",
-        "labelframe_fg": "#EAEAEA",
-        "accent": "#4CAF50",
-        "accent2": "#2196F3",
-        "danger": "#f44336",
-        "warning": "#FF9800",
-        "info": "#9C27B0",
-        "tree_bg": "#1E1E1E",
-        "tree_fg": "#EAEAEA",
-        "tree_heading_bg": "#CCCCCC",
-        "tree_heading_fg": "#000000",
-        "tree_select_bg": "#3949AB",
-    },
-    "Light": {
-        "root_bg": "#F5F5F5",
-        "frame_bg": "#FFFFFF",
-        "label_bg": "#F5F5F5",
-        "label_fg": "#111111",
-        "entry_bg": "#FFFFFF",
-        "entry_fg": "#111111",
-        "card_bg": "#FFFFFF",
-        "labelframe_bg": "#FFFFFF",
-        "labelframe_fg": "#111111",
-        "accent": "#4CAF50",
-        "accent2": "#2196F3",
-        "danger": "#f44336",
-        "warning": "#FF9800",
-        "info": "#9C27B0",
-        "tree_bg": "#FFFFFF",
-        "tree_fg": "#111111",
-        "tree_heading_bg": "#E0E0E0",
-        "tree_heading_fg": "#000000",
-        "tree_select_bg": "#B3D4FC",
-    },
-    "Blue": {
-        "root_bg": "#0B1B3A",
-        "frame_bg": "#12315E",
-        "label_bg": "#0B1B3A",
-        "label_fg": "#EAF2FF",
-        "entry_bg": "#163B70",
-        "entry_fg": "#EAF2FF",
-        "card_bg": "#12315E",
-        "labelframe_bg": "#12315E",
-        "labelframe_fg": "#EAF2FF",
-        "accent": "#2E7DFF",
-        "accent2": "#00BCD4",
-        "danger": "#FF5252",
-        "warning": "#FFC107",
-        "info": "#7C4DFF",
-        "tree_bg": "#12315E",
-        "tree_fg": "#EAF2FF",
-        "tree_heading_bg": "#A0C0FF",
-        "tree_heading_fg": "#000000",
-        "tree_select_bg": "#1E5CBF",
-    },
-    "Mint": {
-        "root_bg": "#06221C",
-        "frame_bg": "#0B3A2E",
-        "label_bg": "#06221C",
-        "label_fg": "#E9FFF6",
-        "entry_bg": "#0F4A39",
-        "entry_fg": "#E9FFF6",
-        "card_bg": "#0B3A2E",
-        "labelframe_bg": "#0B3A2E",
-        "labelframe_fg": "#E9FFF6",
-        "accent": "#2ECC71",
-        "accent2": "#1ABC9C",
-        "danger": "#E74C3C",
-        "warning": "#F39C12",
-        "info": "#3498DB",
-        "tree_bg": "#0B3A2E",
-        "tree_fg": "#E9FFF6",
-        "tree_heading_bg": "#B4EEB4",
-        "tree_heading_fg": "#000000",
-        "tree_select_bg": "#2D9CDB",
-    },
+ 
+# ─────────────────────────────────────────────
+#  LIQUID GLASS THEME  (single palette)
+# ─────────────────────────────────────────────
+G = {
+    # backgrounds
+    "shell":        "#D4DCFF",   # outermost gradient proxy
+    "panel":        "#E8EEFF",   # glass panel
+    "panel_hover":  "#F0F4FF",
+    "card":         "#EEF2FF",
+    "card_hover":   "#F5F8FF",
+    "input_bg":     "#F2F5FF",
+    "sidebar":      "#E2E8FF",
+ 
+    # borders
+    "border":       "#C0CAFF",
+    "border_light": "#D8DEFF",
+ 
+    # text
+    "txt":          "#1A1A3A",
+    "txt2":         "#5A5A8A",
+    "txt3":         "#9898C0",
+    "txt_white":    "#FFFFFF",
+ 
+    # accents
+    "accent":       "#5E6FFF",
+    "accent_dark":  "#4050DD",
+    "accent_light": "#8090FF",
+    "accent2":      "#A78BFA",
+    "green":        "#10B981",
+    "green_bg":     "#D1FAE5",
+    "red":          "#EF4444",
+    "red_bg":       "#FEE2E2",
+    "amber":        "#F59E0B",
+    "amber_bg":     "#FEF3C7",
+    "info_bg":      "#EFF6FF",
+    "info":         "#3B82F6",
+ 
+    # special
+    "checkout_btn": "#5E6FFF",
+    "topbar":       "#DDE5FF",
+    "status_dot":   "#10B981",
+    "scrollbar":    "#C8D0FF",
 }
-
-
-def apply_ttk_theme(style: ttk.Style, theme_name: str):
-    t = THEMES[theme_name]
-    
-    # Force 'clam' theme to allow custom colors on Treeview headings
-    try:
-        style.theme_use('clam')
-    except:
-        pass
-
-    # Treeview styling
-    style.configure("Custom.Treeview",
-                    background=t["tree_bg"],
-                    foreground=t["tree_fg"],
-                    fieldbackground=t["tree_bg"],
-                    rowheight=24)
-
-    style.configure("Custom.Treeview.Heading",
-                    background=t["tree_heading_bg"],
-                    foreground=t["tree_heading_fg"],
-                    font=("Arial", 10, "bold"),
-                    relief="flat")
-
-    style.map("Custom.Treeview",
-              background=[("selected", t["tree_select_bg"])],
-              foreground=[("selected", t["tree_fg"])])
-
-    # Combobox styling
-    style.configure("Custom.TCombobox",
-                    fieldbackground=t["entry_bg"],
-                    background=t["entry_bg"],
-                    foreground=t["entry_fg"],
-                    bordercolor=t["tree_heading_bg"])
-
-    # Labels via ttk are limited, but Treeview/Combobox will look consistent
-    return
-
-
-
+ 
+# Map roles used in buttons so theme engine can remap them
+ROLE_COLORS = {
+    "accent":  G["accent"],
+    "accent2": G["info"],
+    "danger":  G["red"],
+    "warning": G["amber"],
+    "info":    G["accent2"],
+}
+ 
+# ─────────────────────────────────────────────
+#  HELPERS
+# ─────────────────────────────────────────────
+def hex_to_rgb(hex_color):
+    h = hex_color.lstrip('#')
+    return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+ 
+def blend(c1, c2, t):
+    r1, g1, b1 = hex_to_rgb(c1)
+    r2, g2, b2 = hex_to_rgb(c2)
+    r = int(r1 + (r2 - r1) * t)
+    g_val = int(g1 + (g2 - g1) * t)
+    b = int(b1 + (b2 - b1) * t)
+    return f"#{r:02x}{g_val:02x}{b:02x}"
+ 
+def rounded_rect(canvas, x1, y1, x2, y2, r=12, **kwargs):
+    """Draw a rounded rectangle on a Canvas widget."""
+    pts = [
+        x1+r, y1, x2-r, y1,
+        x2, y1, x2, y1+r,
+        x2, y2-r, x2, y2,
+        x2-r, y2, x1+r, y2,
+        x1, y2, x1, y2-r,
+        x1, y1+r, x1, y1,
+        x1+r, y1,
+    ]
+    return canvas.create_polygon(pts, smooth=True, **kwargs)
+ 
+def style_entry(e):
+    e.config(bg=G["input_bg"], fg=G["txt"], insertbackground=G["accent"],
+              relief=FLAT, highlightthickness=1,
+              highlightbackground=G["border"], highlightcolor=G["accent"])
+ 
+def style_button(b, role="accent"):
+    color = ROLE_COLORS.get(role, G["accent"])
+    b.config(bg=color, fg=G["txt_white"], activebackground=G["accent_dark"],
+             activeforeground=G["txt_white"], relief=FLAT, cursor="hand2",
+             bd=0, highlightthickness=0)
+ 
+def apply_scrollbar(sb):
+    sb.config(bg=G["scrollbar"], troughcolor=G["panel"],
+              activebackground=G["accent"], relief=FLAT, bd=0, width=6,
+              highlightthickness=0)
+ 
+# ─────────────────────────────────────────────
+#  DATABASE
+# ─────────────────────────────────────────────
 class Database:
     def __init__(self, db_name="mypos.db"):
         self.conn = sqlite3.connect(db_name)
         self.cursor = self.conn.cursor()
         self.create_tables()
-    
+ 
     def create_tables(self):
-        # Users table
-        self.cursor.execute('''
+        self.cursor.executescript('''
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
@@ -158,20 +128,12 @@ class Database:
                 role TEXT NOT NULL,
                 full_name TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        
-        # Categories table
-        self.cursor.execute('''
+            );
             CREATE TABLE IF NOT EXISTS categories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT UNIQUE NOT NULL,
                 description TEXT
-            )
-        ''')
-        
-        # Products table
-        self.cursor.execute('''
+            );
             CREATE TABLE IF NOT EXISTS products (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 barcode TEXT UNIQUE,
@@ -182,12 +144,8 @@ class Database:
                 quantity INTEGER DEFAULT 0,
                 min_stock INTEGER DEFAULT 0,
                 unit TEXT,
-                FOREIGN KEY (category_id) REFERENCES categories (id)
-            )
-        ''')
-        
-        # Sales table
-        self.cursor.execute('''
+                FOREIGN KEY (category_id) REFERENCES categories(id)
+            );
             CREATE TABLE IF NOT EXISTS sales (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 invoice_no TEXT UNIQUE NOT NULL,
@@ -197,12 +155,8 @@ class Database:
                 change REAL,
                 sale_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 payment_method TEXT,
-                FOREIGN KEY (user_id) REFERENCES users (id)
-            )
-        ''')
-        
-        # Sale items table
-        self.cursor.execute('''
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            );
             CREATE TABLE IF NOT EXISTS sale_items (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 sale_id INTEGER,
@@ -210,1043 +164,1359 @@ class Database:
                 quantity INTEGER NOT NULL,
                 price REAL NOT NULL,
                 total REAL NOT NULL,
-                FOREIGN KEY (sale_id) REFERENCES sales (id),
-                FOREIGN KEY (product_id) REFERENCES products (id)
-            )
+                FOREIGN KEY (sale_id) REFERENCES sales(id),
+                FOREIGN KEY (product_id) REFERENCES products(id)
+            );
         ''')
-        
-        # Insert default admin user if not exists
         admin_pass = hashlib.sha256("admin123".encode()).hexdigest()
-        self.cursor.execute("INSERT OR IGNORE INTO users (username, password, role, full_name) VALUES (?, ?, ?, ?)",
-                           ("admin", admin_pass, "admin", "System Administrator"))
-        
-        # Insert default categories
-        default_categories = ["Beverages", "Snacks", "Dairy", "Vegetables", "Fruits", "Cleaning", "Personal Care"]
-        for cat in default_categories:
+        self.cursor.execute(
+            "INSERT OR IGNORE INTO users (username, password, role, full_name) VALUES (?,?,?,?)",
+            ("admin", admin_pass, "admin", "System Administrator"))
+        for cat in ["Beverages", "Snacks", "Dairy", "Vegetables", "Fruits", "Cleaning", "Personal Care"]:
             self.cursor.execute("INSERT OR IGNORE INTO categories (name) VALUES (?)", (cat,))
-        
         self.conn.commit()
-    
-    def execute_query(self, query, params=()):
-        self.cursor.execute(query, params)
+ 
+    def execute_query(self, q, p=()):
+        self.cursor.execute(q, p)
         self.conn.commit()
         return self.cursor
-    
-    def fetch_all(self, query, params=()):
-        self.cursor.execute(query, params)
+ 
+    def fetch_all(self, q, p=()):
+        self.cursor.execute(q, p)
         return self.cursor.fetchall()
-    
-    def fetch_one(self, query, params=()):
-        self.cursor.execute(query, params)
+ 
+    def fetch_one(self, q, p=()):
+        self.cursor.execute(q, p)
         return self.cursor.fetchone()
-    
+ 
     def close(self):
         self.conn.close()
-
-class LoginWindow:
-    def __init__(self, root, theme_name="Dark"):
+ 
+# ─────────────────────────────────────────────
+#  TTK STYLE SETUP
+# ─────────────────────────────────────────────
+def setup_ttk_style(style: ttk.Style):
+    try:
+        style.theme_use('clam')
+    except Exception:
+        pass
+ 
+    style.configure("Glass.Treeview",
+                    background=G["card"],
+                    foreground=G["txt"],
+                    fieldbackground=G["card"],
+                    rowheight=28,
+                    font=("Segoe UI", 10))
+    style.configure("Glass.Treeview.Heading",
+                    background=G["topbar"],
+                    foreground=G["txt"],
+                    font=("Segoe UI", 10, "bold"),
+                    relief="flat")
+    style.map("Glass.Treeview",
+              background=[("selected", G["accent"])],
+              foreground=[("selected", "#FFFFFF")])
+ 
+    style.configure("Glass.TCombobox",
+                    fieldbackground=G["input_bg"],
+                    background=G["input_bg"],
+                    foreground=G["txt"],
+                    selectbackground=G["accent"],
+                    selectforeground="#FFFFFF",
+                    bordercolor=G["border"],
+                    arrowcolor=G["accent"])
+    style.map("Glass.TCombobox",
+              fieldbackground=[("readonly", G["input_bg"])],
+              foreground=[("readonly", G["txt"])])
+ 
+    style.configure("GlassV.TScrollbar",
+                    background=G["scrollbar"],
+                    troughcolor=G["panel"],
+                    arrowcolor=G["accent"],
+                    relief=FLAT, bd=0)
+    style.configure("GlassH.TScrollbar",
+                    background=G["scrollbar"],
+                    troughcolor=G["panel"],
+                    arrowcolor=G["accent"],
+                    relief=FLAT, bd=0)
+ 
+# ─────────────────────────────────────────────
+#  GLASS FRAME WIDGET
+# ─────────────────────────────────────────────
+class GlassFrame(Frame):
+    """A Frame that draws a rounded glass panel behind its children."""
+    def __init__(self, parent, radius=14, bg_color=None, border_color=None,
+                 highlight_top=True, **kwargs):
+        self.radius = radius
+        self.bg_color = bg_color or G["panel"]
+        self.border_color = border_color or G["border"]
+        self.highlight_top = highlight_top
+ 
+        super().__init__(parent, bg=self.bg_color, **kwargs)
+        self.bind("<Configure>", self._redraw)
+ 
+    def _redraw(self, event=None):
+        pass  # Tkinter Frame handles its own bg; canvas overlays are in subclass
+ 
+ 
+class GlassCard(Frame):
+    """Card widget with subtle top-highlight border."""
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent,
+                         bg=G["card"],
+                         highlightbackground=G["border_light"],
+                         highlightthickness=1,
+                         **kwargs)
+ 
+ 
+# ─────────────────────────────────────────────
+#  ANIMATED TOAST
+# ─────────────────────────────────────────────
+class Toast:
+    def __init__(self, root):
         self.root = root
-        self.theme_name = theme_name
-        self.root.title("myPOS - Login")
-        self.root.geometry("400x300")
+        self._after_id = None
+        self.lbl = Label(root, text="", font=("Segoe UI", 11, "bold"),
+                         bg=G["txt"], fg="#FFFFFF", padx=20, pady=10,
+                         relief=FLAT, bd=0)
+ 
+    def show(self, msg, duration=1800):
+        self.lbl.config(text=msg)
+        self.lbl.place(relx=0.5, rely=0.93, anchor=CENTER)
+        self.lbl.lift()
+        if self._after_id:
+            self.root.after_cancel(self._after_id)
+        self._after_id = self.root.after(duration, self._hide)
+ 
+    def _hide(self):
+        self.lbl.place_forget()
+ 
+# ─────────────────────────────────────────────
+#  LOGIN WINDOW
+# ─────────────────────────────────────────────
+class LoginWindow:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("myPOS — Liquid Glass")
+        self.root.geometry("460x360")
         self.root.resizable(False, False)
-
+        self.root.configure(bg=G["shell"])
         self.db = Database()
-        
-        # Center the window
-        self.center_window()
-        
-        # Login frame
-        self.login_frame = Frame(self.root, padx=20, pady=20)
-        self.login_frame.pack(expand=True, fill=BOTH)
-        
-        # Title
-        title_label = Label(self.login_frame, text="myPOS System", font=("Arial", 24, "bold"))
-        title_label.grid(row=0, column=0, columnspan=2, pady=20)
-        
-        # Username
-        Label(self.login_frame, text="Username:", font=("Arial", 12)).grid(row=1, column=0, sticky=W, pady=5)
-        self.username_entry = Entry(self.login_frame, font=("Arial", 12), width=25)
-        self.username_entry.grid(row=1, column=1, pady=5)
-        self.username_entry.focus()
-        
-        # Password
-        Label(self.login_frame, text="Password:", font=("Arial", 12)).grid(row=2, column=0, sticky=W, pady=5)
-        self.password_entry = Entry(self.login_frame, font=("Arial", 12), width=25, show="*")
-        self.password_entry.grid(row=2, column=1, pady=5)
-        
-        # Login button
-        login_btn = Button(self.login_frame, text="Login", font=("Arial", 12), command=self.login, 
-                          bg=THEMES[self.theme_name]["accent"], fg="white", padx=20, pady=5)
-
-        login_btn.grid(row=3, column=0, columnspan=2, pady=20)
-        self.apply_login_theme(self.theme_name)
-        
-        # Bind Enter key
-        self.root.bind('<Return>', lambda event: self.login())
-
-    def apply_login_theme(self, theme_name):
-        t = THEMES[theme_name]
-        self.root.configure(bg=t["root_bg"])
-        self.login_frame.configure(bg=t["frame_bg"])
-
-        for widget in self.login_frame.winfo_children():
-            try:
-                if isinstance(widget, Label):
-                    widget.configure(bg=t["frame_bg"], fg=t["label_fg"])
-                elif isinstance(widget, Entry):
-                    widget.configure(
-                        bg=t["entry_bg"],
-                        fg=t["entry_fg"],
-                        insertbackground=t["entry_fg"],
-                        highlightbackground=t["tree_heading_bg"],
-                        highlightcolor=t["accent"],
-                    )
-                elif isinstance(widget, Button):
-                    widget.configure(activebackground=t["accent"], activeforeground="white")
-            except TclError:
-                pass
-    
-    def center_window(self):
+        self._center(460, 360)
+        self._build()
+ 
+    def _center(self, w, h):
         self.root.update_idletasks()
-        width = 400
-        height = 300
-        x = (self.root.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.root.winfo_screenheight() // 2) - (height // 2)
-        self.root.geometry(f'{width}x{height}+{x}+{y}')
-    
+        x = (self.root.winfo_screenwidth() - w) // 2
+        y = (self.root.winfo_screenheight() - h) // 2
+        self.root.geometry(f"{w}x{h}+{x}+{y}")
+ 
+    def _build(self):
+        # Background gradient strips
+        for i in range(20):
+            t = i / 19
+            c = blend(G["shell"], "#C8D8FF", t)
+            Frame(self.root, bg=c, height=18).pack(fill=X)
+ 
+        # Glass card
+        card = Frame(self.root, bg=G["panel"],
+                     highlightbackground=G["border"], highlightthickness=1,
+                     padx=36, pady=32)
+        card.place(relx=0.5, rely=0.5, anchor=CENTER, width=360, height=300)
+ 
+        # Logo row
+        logo_f = Frame(card, bg=G["panel"])
+        logo_f.pack(pady=(0, 18))
+        dot = Canvas(logo_f, width=12, height=12, bg=G["panel"],
+                     highlightthickness=0)
+        dot.pack(side=LEFT, padx=(0, 6), pady=3)
+        dot.create_oval(0, 0, 12, 12, fill=G["accent"], outline="")
+        Label(logo_f, text="myPOS", font=("Segoe UI", 22, "bold"),
+              bg=G["panel"], fg=G["txt"]).pack(side=LEFT)
+ 
+        # Fields
+        for label_text, attr, show in [
+            ("Username", "user_entry", ""),
+            ("Password", "pass_entry", "•"),
+        ]:
+            f = Frame(card, bg=G["panel"])
+            f.pack(fill=X, pady=5)
+            Label(f, text=label_text, font=("Segoe UI", 10),
+                  bg=G["panel"], fg=G["txt2"], width=9, anchor=W).pack(side=LEFT)
+            e = Entry(f, font=("Segoe UI", 12), show=show, relief=FLAT,
+                      bg=G["input_bg"], fg=G["txt"], insertbackground=G["accent"],
+                      highlightbackground=G["border"], highlightthickness=1,
+                      highlightcolor=G["accent"])
+            e.pack(side=LEFT, fill=X, expand=True, ipady=6, padx=4)
+            setattr(self, attr, e)
+ 
+        self.user_entry.focus()
+ 
+        # Login button
+        btn = Button(card, text="Sign In →", font=("Segoe UI", 12, "bold"),
+                     command=self.login, relief=FLAT, cursor="hand2",
+                     bg=G["accent"], fg="#FFFFFF",
+                     activebackground=G["accent_dark"], activeforeground="#FFFFFF",
+                     bd=0, padx=24, pady=10)
+        btn.pack(pady=(20, 0), ipadx=10)
+ 
+        # Hint
+        Label(card, text="Default: admin / admin123",
+              font=("Segoe UI", 9), bg=G["panel"], fg=G["txt3"]).pack(pady=(8, 0))
+ 
+        self.root.bind('<Return>', lambda _: self.login())
+ 
     def login(self):
-        username = self.username_entry.get()
-        password = hashlib.sha256(self.password_entry.get().encode()).hexdigest()
-        
-        user = self.db.fetch_one("SELECT id, username, role, full_name FROM users WHERE username=? AND password=?", 
-                                 (username, password))
-        
+        username = self.user_entry.get().strip()
+        password = hashlib.sha256(self.pass_entry.get().encode()).hexdigest()
+        user = self.db.fetch_one(
+            "SELECT id, username, role, full_name FROM users WHERE username=? AND password=?",
+            (username, password))
         if user:
             self.db.close()
             self.root.destroy()
-            main_root = Tk()
-            MainApp(main_root, user, self.theme_name)
-            main_root.mainloop()
+            r = Tk()
+            MainApp(r, user)
+            r.mainloop()
         else:
-            messagebox.showerror("Error", "Invalid username or password!")
-
+            messagebox.showerror("Login Failed", "Invalid username or password.")
+ 
+# ─────────────────────────────────────────────
+#  MAIN APPLICATION
+# ─────────────────────────────────────────────
 class MainApp:
-    def __init__(self, root, user, theme_name="Dark"):
+    def __init__(self, root, user):
         self.root = root
         self.user = user
         self.user_id, self.username, self.role, self.full_name = user
-
-        self.root.title(f"myPOS - {self.full_name} ({self.role})")
-        self.root.geometry("1200x700")
-
+        self.root.title(f"myPOS  ·  {self.full_name}")
+        self.root.geometry("1280x760")
+        self.root.configure(bg=G["shell"])
+        self.root.minsize(1100, 680)
+ 
         self.db = Database()
         self.cart = []
-
-        # Theme state
-        self.theme_name = theme_name
+        self.pay_method = StringVar(value="Cash")
         self.style = ttk.Style(self.root)
-
-        # Base tk background for login/main widgets
-        self.root.configure(bg=THEMES[self.theme_name]["root_bg"])
-
-
-        # Setup UI
-        self.setup_menu()
-        self.setup_main_interface()
-
-        # Apply initial theme (after widgets exist)
-        self.apply_theme(self.theme_name)
-
-        # Load initial data
-        self.load_categories()
-        self.load_products()
-
-    
-    def setup_menu(self):
-        menubar = Menu(self.root)
-        self.root.config(menu=menubar)
-
-        # Theme menu
-        self.theme_var = StringVar(value=self.theme_name)
-        theme_menu = Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Theme", menu=theme_menu)
-        for name in THEMES.keys():
-            theme_menu.add_radiobutton(
-                label=name,
-                value=name,
-                variable=self.theme_var,
-                command=lambda n=name: self.set_theme(n)
-            )
-
-        # File menu
-        file_menu = Menu(menubar, tearoff=0)
-
-        menubar.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="Change Password", command=self.change_password)
-        file_menu.add_separator()
-        file_menu.add_command(label="Logout", command=self.logout)
-        file_menu.add_command(label="Exit", command=self.root.quit)
-        
-        # Reports menu
-        reports_menu = Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Reports", menu=reports_menu)
-        reports_menu.add_command(label="Daily Sales Report", command=self.daily_sales_report)
-        reports_menu.add_command(label="Inventory Report", command=self.inventory_report)
-        reports_menu.add_command(label="Sales History", command=self.sales_history)
-        
-        # Management menu (admin only)
+        setup_ttk_style(self.style)
+ 
+        self._center(1280, 760)
+        self.toast = Toast(self.root)
+ 
+        self._build_menu()
+        self._build_ui()
+        self._load_categories()
+        self._load_products()
+ 
+    def _center(self, w, h):
+        self.root.update_idletasks()
+        sw, sh = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
+        self.root.geometry(f"{w}x{h}+{(sw-w)//2}+{(sh-h)//2}")
+ 
+    # ── MENU ──────────────────────────────────
+    def _build_menu(self):
+        mb = Menu(self.root, bg=G["topbar"], fg=G["txt"],
+                  activebackground=G["accent"], activeforeground="#FFF",
+                  relief=FLAT, bd=0)
+        self.root.config(menu=mb)
+ 
+        file_m = Menu(mb, tearoff=0, bg=G["panel"], fg=G["txt"],
+                      activebackground=G["accent"], activeforeground="#FFF")
+        mb.add_cascade(label="File", menu=file_m)
+        file_m.add_command(label="Change Password", command=self._change_password)
+        file_m.add_separator()
+        file_m.add_command(label="Logout", command=self._logout)
+        file_m.add_command(label="Exit", command=self.root.quit)
+ 
+        rep_m = Menu(mb, tearoff=0, bg=G["panel"], fg=G["txt"],
+                     activebackground=G["accent"], activeforeground="#FFF")
+        mb.add_cascade(label="Reports", menu=rep_m)
+        rep_m.add_command(label="Daily Sales", command=self._daily_sales)
+        rep_m.add_command(label="Inventory", command=self._inventory_report)
+        rep_m.add_command(label="Sales History", command=self._sales_history)
+ 
         if self.role == "admin":
-            manage_menu = Menu(menubar, tearoff=0)
-            menubar.add_cascade(label="Management", menu=manage_menu)
-            manage_menu.add_command(label="User Management", command=self.user_management)
-            manage_menu.add_command(label="Category Management", command=self.category_management)
-    
-    def apply_theme(self, theme_name: str):
-        if theme_name not in THEMES:
-            return
-        self.theme_name = theme_name
-        t = THEMES[theme_name]
-        if hasattr(self, "theme_var"):
-            self.theme_var.set(theme_name)
-
-        # Root background
-        self.root.configure(bg=t["root_bg"])
-
-        # ttk themes (custom styles)
-        apply_ttk_theme(self.style, theme_name)
-
-        # Fill every Tk container/label area so the selected theme covers
-        # whole panels instead of leaving default-gray gaps between widgets.
-        self.apply_theme_to_widget(self.root, t)
-
-    def apply_theme_to_widget(self, widget, t):
-        try:
-            if isinstance(widget, (Tk, Toplevel)):
-                widget.configure(bg=t["root_bg"])
-            elif isinstance(widget, LabelFrame):
-                widget.configure(
-                    bg=t["labelframe_bg"],
-                    fg=t["labelframe_fg"],
-                    highlightbackground=t["tree_heading_bg"],
-                    highlightcolor=t["accent"],
-                )
-            elif isinstance(widget, Frame):
-                widget.configure(bg=t["frame_bg"])
-            elif isinstance(widget, Label):
-                widget.configure(bg=t["frame_bg"], fg=t["label_fg"])
-            elif isinstance(widget, Entry):
-                widget.configure(
-                    bg=t["entry_bg"],
-                    fg=t["entry_fg"],
-                    insertbackground=t["entry_fg"],
-                    highlightbackground=t["tree_heading_bg"],
-                    highlightcolor=t["accent"],
-                )
-            elif isinstance(widget, Button):
-                color_role = self.get_theme_color_role(widget)
-                if color_role:
-                    widget.configure(bg=t[color_role], fg="white")
-                widget.configure(activebackground=t["accent"], activeforeground="white")
-            elif isinstance(widget, ttk.Treeview):
-                widget.configure(style="Custom.Treeview")
-            elif isinstance(widget, ttk.Combobox):
-                widget.configure(style="Custom.TCombobox")
-        except TclError:
-            pass
-
-        for child in widget.winfo_children():
-            self.apply_theme_to_widget(child, t)
-
-    def get_theme_color_role(self, widget):
-        try:
-            current_rgb = widget.winfo_rgb(widget.cget("bg"))
-        except TclError:
-            return None
-
-        for role in ("accent", "accent2", "danger", "warning", "info"):
-            for theme in THEMES.values():
-                try:
-                    if current_rgb == widget.winfo_rgb(theme[role]):
-                        return role
-                except TclError:
-                    continue
-        return None
-
-    def set_theme(self, theme_name: str):
-        self.apply_theme(theme_name)
-
-    def setup_main_interface(self):
-        # Main container
-        main_frame = Frame(self.root)
-
-        main_frame.pack(fill=BOTH, expand=True, padx=10, pady=10)
-        
-        # Left panel - Products
-        left_frame = Frame(main_frame, width=600)
-        left_frame.pack(side=LEFT, fill=BOTH, expand=True, padx=(0, 5))
-        
-        # Category filter
-        filter_frame = LabelFrame(left_frame, text="Categories", padx=5, pady=5)
-        filter_frame.pack(fill=X, pady=(0, 10))
-        
-        self.category_var = StringVar(value="All")
-        self.category_combo = ttk.Combobox(filter_frame, textvariable=self.category_var, state="readonly", width=30)
-        self.category_combo.pack(side=LEFT, padx=5)
-        self.category_combo.bind('<<ComboboxSelected>>', lambda e: self.load_products())
-        
-        # Search
-        search_frame = Frame(filter_frame)
-        search_frame.pack(side=RIGHT)
-        Label(search_frame, text="Search:").pack(side=LEFT)
-        self.search_entry = Entry(search_frame, width=20)
-        self.search_entry.pack(side=LEFT, padx=5)
-        self.search_entry.bind('<KeyRelease>', lambda e: self.load_products())
-        
-        # Products list
-        products_frame = LabelFrame(left_frame, text="Products", padx=5, pady=5)
-        products_frame.pack(fill=BOTH, expand=True)
-        
-        # Product tree
-        columns = ("ID", "Barcode", "Name", "Price", "Stock", "Unit")
-        self.product_tree = ttk.Treeview(products_frame, columns=columns, show="headings", height=15)
-        
-        for col in columns:
-            self.product_tree.heading(col, text=col)
-            width = 50 if col == "ID" else 100 if col == "Barcode" else 150 if col == "Name" else 80
-            self.product_tree.column(col, width=width)
-        
-        self.product_tree.pack(fill=BOTH, expand=True)
-        
-        # Scrollbar
-        scrollbar = ttk.Scrollbar(products_frame, orient=VERTICAL, command=self.product_tree.yview)
-        self.product_tree.configure(yscrollcommand=scrollbar.set)
-        scrollbar.pack(side=RIGHT, fill=Y)
-        
-        # Add to cart button
-        add_btn = Button(left_frame, text="Add to Cart", command=self.add_to_cart, 
-                        bg=THEMES[self.theme_name]["accent2"], fg="white", font=("Arial", 12), padx=20, pady=5)
-
-        add_btn.pack(pady=10)
-        
-        # Bind double-click to add to cart
-        self.product_tree.bind('<Double-Button-1>', lambda e: self.add_to_cart())
-        
-        # Right panel - Cart
-        right_frame = Frame(main_frame, width=500)
-        right_frame.pack(side=RIGHT, fill=BOTH, expand=True, padx=(5, 0))
-        
-        # Cart title
-        cart_title = Label(right_frame, text="Shopping Cart", font=("Arial", 16, "bold"))
-        cart_title.pack()
-        
-        # Cart items
-        cart_frame = Frame(right_frame)
-        cart_frame.pack(fill=BOTH, expand=True, pady=10)
-        
-        columns = ("ID", "Name", "Qty", "Price", "Total")
-        self.cart_tree = ttk.Treeview(cart_frame, columns=columns, show="headings", height=12)
-        
-        for col in columns:
-            self.cart_tree.heading(col, text=col)
-            width = 40 if col == "ID" else 120 if col == "Name" else 70
-            self.cart_tree.column(col, width=width)
-        
-        self.cart_tree.pack(side=LEFT, fill=BOTH, expand=True)
-
-        cart_scroll = ttk.Scrollbar(cart_frame, orient=VERTICAL, command=self.cart_tree.yview)
-        self.cart_tree.configure(yscrollcommand=cart_scroll.set)
-        cart_scroll.pack(side=RIGHT, fill=Y)
-
-        # Cart control buttons
-        btn_frame = Frame(right_frame)
-        btn_frame.pack(fill=X, pady=5)
-        
-        Button(btn_frame, text="Remove Selected", command=self.remove_from_cart, 
-               bg=THEMES[self.theme_name]["danger"], fg="white").pack(side=LEFT, padx=5)
-        Button(btn_frame, text="Clear Cart", command=self.clear_cart, 
-               bg=THEMES[self.theme_name]["warning"], fg="white").pack(side=LEFT, padx=5)
-        Button(btn_frame, text="Update Quantity", command=self.update_quantity, 
-               bg=THEMES[self.theme_name]["warning"], fg="white").pack(side=LEFT, padx=5)
-
-        
-        # Total and checkout
-        total_frame = LabelFrame(right_frame, text="Order Summary", padx=10, pady=10)
-        total_frame.pack(fill=X, pady=10)
-        
-        self.total_label = Label(total_frame, text="Total: $0.00", font=("Arial", 18, "bold"))
-        self.total_label.pack()
-        
-        checkout_btn = Button(total_frame, text="Checkout", command=self.checkout,
-                             bg=THEMES[self.theme_name]["accent"], fg="white", font=("Arial", 14), padx=40, pady=10)
-
-        checkout_btn.pack(pady=10)
-        
+            mgmt_m = Menu(mb, tearoff=0, bg=G["panel"], fg=G["txt"],
+                          activebackground=G["accent"], activeforeground="#FFF")
+            mb.add_cascade(label="Management", menu=mgmt_m)
+            mgmt_m.add_command(label="Users", command=self._user_management)
+            mgmt_m.add_command(label="Categories", command=self._category_management)
+            mgmt_m.add_command(label="Products", command=self._product_management)
+ 
+    # ── MAIN UI ───────────────────────────────
+    def _build_ui(self):
+        # Top bar
+        topbar = Frame(self.root, bg=G["topbar"], height=52)
+        topbar.pack(fill=X, padx=12, pady=(10, 0))
+        topbar.pack_propagate(False)
+ 
+        # Brand
+        brand_f = Frame(topbar, bg=G["topbar"])
+        brand_f.pack(side=LEFT, padx=16, pady=10)
+        dot_c = Canvas(brand_f, width=10, height=10, bg=G["topbar"], highlightthickness=0)
+        dot_c.pack(side=LEFT, padx=(0, 6), pady=2)
+        dot_c.create_oval(0, 0, 10, 10, fill=G["accent"], outline="")
+        Label(brand_f, text="myPOS", font=("Segoe UI", 16, "bold"),
+              bg=G["topbar"], fg=G["txt"]).pack(side=LEFT)
+ 
+        # Status dot
+        status_f = Frame(topbar, bg=G["topbar"], highlightbackground=G["border"],
+                         highlightthickness=1)
+        status_f.pack(side=LEFT, padx=16, pady=14)
+        dot2 = Canvas(status_f, width=8, height=8, bg=G["topbar"], highlightthickness=0)
+        dot2.pack(side=LEFT, padx=(6, 4), pady=1)
+        dot2.create_oval(0, 0, 8, 8, fill=G["green"], outline="")
+        Label(status_f, text="Online", font=("Segoe UI", 9),
+              bg=G["topbar"], fg=G["txt2"]).pack(side=LEFT, padx=(0, 6))
+ 
+        # Right side info
+        right_f = Frame(topbar, bg=G["topbar"])
+        right_f.pack(side=RIGHT, padx=16, pady=8)
+        now = datetime.datetime.now().strftime("%d %b %Y  %H:%M")
+        Label(right_f, text=now, font=("Segoe UI", 9),
+              bg=G["topbar"], fg=G["txt2"]).pack(side=RIGHT, padx=8)
+        initials = "".join(w[0].upper() for w in self.full_name.split()[:2])
+        avatar = Label(right_f, text=initials, font=("Segoe UI", 10, "bold"),
+                       bg=G["accent"], fg="#FFF", width=3, height=1)
+        avatar.pack(side=RIGHT)
+        Label(right_f, text=self.full_name, font=("Segoe UI", 10),
+              bg=G["topbar"], fg=G["txt"]).pack(side=RIGHT, padx=8)
+ 
+        # Body
+        body = Frame(self.root, bg=G["shell"])
+        body.pack(fill=BOTH, expand=True, padx=12, pady=10)
+ 
+        # LEFT — product browser
+        self._build_left(body)
+        # RIGHT — cart
+        self._build_right(body)
+ 
         # Status bar
-        self.status_bar = Label(self.root, text="Ready", bd=1, relief=SUNKEN, anchor=W)
-        self.status_bar.pack(side=BOTTOM, fill=X)
-    
-    def load_categories(self):
-        categories = self.db.fetch_all("SELECT name FROM categories ORDER BY name")
-        category_list = ["All"] + [cat[0] for cat in categories]
-        self.category_combo['values'] = category_list
-    
-    def load_products(self):
-        # Clear current items
-        for item in self.product_tree.get_children():
-            self.product_tree.delete(item)
-        
-        category = self.category_var.get()
-        search = self.search_entry.get()
-        
-        if category == "All":
-            if search:
-                query = """SELECT p.id, p.barcode, p.name, p.price, p.quantity, p.unit 
-                          FROM products p 
-                          WHERE p.name LIKE ? OR p.barcode LIKE ?
-                          ORDER BY p.name"""
-                params = (f"%{search}%", f"%{search}%")
+        self.status_var = StringVar(value="Ready")
+        sb = Label(self.root, textvariable=self.status_var,
+                   font=("Segoe UI", 9), bg=G["topbar"], fg=G["txt2"],
+                   anchor=W, padx=12, pady=4)
+        sb.pack(fill=X, side=BOTTOM)
+ 
+    def _build_left(self, parent):
+        lf = Frame(parent, bg=G["shell"])
+        lf.pack(side=LEFT, fill=BOTH, expand=True, padx=(0, 8))
+ 
+        # Search bar
+        search_panel = Frame(lf, bg=G["panel"],
+                             highlightbackground=G["border"], highlightthickness=1)
+        search_panel.pack(fill=X, pady=(0, 8))
+ 
+        search_inner = Frame(search_panel, bg=G["panel"])
+        search_inner.pack(fill=X, padx=12, pady=10)
+ 
+        Label(search_inner, text="⌕", font=("Segoe UI", 14),
+              bg=G["panel"], fg=G["txt2"]).pack(side=LEFT, padx=(0, 6))
+ 
+        self.search_var = StringVar()
+        se = Entry(search_inner, textvariable=self.search_var,
+                   font=("Segoe UI", 12), relief=FLAT,
+                   bg=G["input_bg"], fg=G["txt"],
+                   insertbackground=G["accent"],
+                   highlightbackground=G["border"], highlightthickness=1,
+                   highlightcolor=G["accent"])
+        se.pack(side=LEFT, fill=X, expand=True, ipady=7, padx=4)
+        se.insert(0, "Search products...")
+        se.bind("<FocusIn>", lambda e: (se.delete(0, END) if se.get() == "Search products..." else None))
+        se.bind("<FocusOut>", lambda e: (se.insert(0, "Search products...") if not se.get() else None))
+        self.search_var.trace_add("write", lambda *_: self._load_products())
+ 
+        # Barcode label
+        Label(search_inner, text="Barcode ▸", font=("Segoe UI", 9),
+              bg=G["panel"], fg=G["txt3"]).pack(side=RIGHT, padx=8)
+        self.barcode_var = StringVar()
+        be = Entry(search_inner, textvariable=self.barcode_var,
+                   font=("Segoe UI", 11), relief=FLAT, width=14,
+                   bg=G["input_bg"], fg=G["txt"],
+                   insertbackground=G["accent"],
+                   highlightbackground=G["border"], highlightthickness=1,
+                   highlightcolor=G["accent"])
+        be.pack(side=RIGHT, ipady=7)
+        be.bind("<Return>", self._barcode_lookup)
+ 
+        # Category pills
+        self.cat_frame = Frame(lf, bg=G["shell"])
+        self.cat_frame.pack(fill=X, pady=(0, 8))
+ 
+        # Product treeview panel
+        prod_panel = Frame(lf, bg=G["panel"],
+                           highlightbackground=G["border"], highlightthickness=1)
+        prod_panel.pack(fill=BOTH, expand=True)
+ 
+        header = Frame(prod_panel, bg=G["topbar"])
+        header.pack(fill=X)
+        Label(header, text="Products", font=("Segoe UI", 11, "bold"),
+              bg=G["topbar"], fg=G["txt"], padx=14, pady=8).pack(side=LEFT)
+        self.prod_count_lbl = Label(header, text="", font=("Segoe UI", 9),
+                                    bg=G["topbar"], fg=G["txt2"])
+        self.prod_count_lbl.pack(side=RIGHT, padx=14)
+ 
+        cols = ("ID", "Barcode", "Name", "Category", "Price", "Stock", "Unit")
+        tree_f = Frame(prod_panel, bg=G["panel"])
+        tree_f.pack(fill=BOTH, expand=True, padx=8, pady=8)
+ 
+        self.prod_tree = ttk.Treeview(tree_f, columns=cols, show="headings",
+                                      style="Glass.Treeview", height=16,
+                                      selectmode="browse")
+        widths = {"ID": 40, "Barcode": 100, "Name": 200, "Category": 100,
+                  "Price": 70, "Stock": 60, "Unit": 60}
+        for col in cols:
+            self.prod_tree.heading(col, text=col)
+            self.prod_tree.column(col, width=widths[col], stretch=(col == "Name"))
+ 
+        # Alternate row colors
+        self.prod_tree.tag_configure("odd", background=G["card"])
+        self.prod_tree.tag_configure("even", background=G["panel"])
+        self.prod_tree.tag_configure("low", foreground=G["red"])
+ 
+        vsb = ttk.Scrollbar(tree_f, orient=VERTICAL, command=self.prod_tree.yview,
+                            style="GlassV.TScrollbar")
+        self.prod_tree.configure(yscrollcommand=vsb.set)
+        self.prod_tree.pack(side=LEFT, fill=BOTH, expand=True)
+        vsb.pack(side=RIGHT, fill=Y)
+ 
+        self.prod_tree.bind("<Double-Button-1>", lambda _: self._add_to_cart())
+        self.prod_tree.bind("<Return>", lambda _: self._add_to_cart())
+ 
+        # Add to cart button
+        btn_row = Frame(lf, bg=G["shell"])
+        btn_row.pack(fill=X, pady=(8, 0))
+        add_btn = Button(btn_row, text="＋  Add to Cart",
+                         font=("Segoe UI", 11, "bold"),
+                         command=self._add_to_cart,
+                         bg=G["info"], fg="#FFF",
+                         activebackground=G["accent_dark"],
+                         activeforeground="#FFF",
+                         relief=FLAT, cursor="hand2",
+                         bd=0, pady=10)
+        add_btn.pack(fill=X)
+ 
+    def _build_right(self, parent):
+        rf = Frame(parent, bg=G["shell"], width=360)
+        rf.pack(side=RIGHT, fill=BOTH)
+        rf.pack_propagate(False)
+ 
+        # Cart panel
+        cart_panel = Frame(rf, bg=G["panel"],
+                           highlightbackground=G["border"], highlightthickness=1)
+        cart_panel.pack(fill=BOTH, expand=True)
+ 
+        # Cart header
+        ch = Frame(cart_panel, bg=G["topbar"])
+        ch.pack(fill=X)
+        Label(ch, text="🛒  Cart", font=("Segoe UI", 12, "bold"),
+              bg=G["topbar"], fg=G["txt"], padx=14, pady=10).pack(side=LEFT)
+        self.cart_count_lbl = Label(ch, text="0 items",
+                                    font=("Segoe UI", 9, "bold"),
+                                    bg=G["accent"], fg="#FFF",
+                                    padx=10, pady=4)
+        self.cart_count_lbl.pack(side=RIGHT, padx=12, pady=8)
+ 
+        # Cart tree
+        cart_tree_f = Frame(cart_panel, bg=G["panel"])
+        cart_tree_f.pack(fill=BOTH, expand=True, padx=8, pady=8)
+ 
+        ccols = ("#", "Name", "Qty", "Price", "Total")
+        self.cart_tree = ttk.Treeview(cart_tree_f, columns=ccols, show="headings",
+                                      style="Glass.Treeview", height=10,
+                                      selectmode="browse")
+        cwidths = {"#": 28, "Name": 140, "Qty": 40, "Price": 65, "Total": 70}
+        for col in ccols:
+            self.cart_tree.heading(col, text=col)
+            self.cart_tree.column(col, width=cwidths[col], stretch=(col == "Name"))
+ 
+        self.cart_tree.tag_configure("odd", background=G["card"])
+        self.cart_tree.tag_configure("even", background=G["panel"])
+ 
+        cvsb = ttk.Scrollbar(cart_tree_f, orient=VERTICAL, command=self.cart_tree.yview,
+                             style="GlassV.TScrollbar")
+        self.cart_tree.configure(yscrollcommand=cvsb.set)
+        self.cart_tree.pack(side=LEFT, fill=BOTH, expand=True)
+        cvsb.pack(side=RIGHT, fill=Y)
+ 
+        # Cart buttons
+        cbf = Frame(cart_panel, bg=G["panel"])
+        cbf.pack(fill=X, padx=8, pady=(0, 6))
+ 
+        for txt, cmd, role in [
+            ("✕ Remove", self._remove_from_cart, G["red"]),
+            ("⟳ Qty", self._update_quantity, G["amber"]),
+            ("✕ Clear", self._clear_cart, G["txt2"]),
+        ]:
+            Button(cbf, text=txt, font=("Segoe UI", 9, "bold"),
+                   command=cmd, bg=role, fg="#FFF",
+                   activebackground=G["accent_dark"], activeforeground="#FFF",
+                   relief=FLAT, cursor="hand2", bd=0, padx=10, pady=6).pack(
+                side=LEFT, padx=(0, 4))
+ 
+        # Separator
+        Frame(cart_panel, bg=G["border"], height=1).pack(fill=X, padx=8)
+ 
+        # Totals
+        totals_f = Frame(cart_panel, bg=G["panel"])
+        totals_f.pack(fill=X, padx=14, pady=10)
+ 
+        self.subtotal_lbl = self._total_row(totals_f, "Subtotal", "$0.00")
+        self.tax_lbl      = self._total_row(totals_f, "Tax (16%)", "$0.00")
+        Frame(totals_f, bg=G["border"], height=1).pack(fill=X, pady=6)
+        self.grand_lbl    = self._total_row(totals_f, "TOTAL", "$0.00",
+                                            big=True, color=G["accent"])
+ 
+        # Payment method
+        Frame(cart_panel, bg=G["border"], height=1).pack(fill=X, padx=8)
+        pm_f = Frame(cart_panel, bg=G["panel"])
+        pm_f.pack(fill=X, padx=12, pady=8)
+        Label(pm_f, text="Payment", font=("Segoe UI", 9, "bold"),
+              bg=G["panel"], fg=G["txt2"]).pack(anchor=W, pady=(0, 4))
+ 
+        pay_btns_f = Frame(pm_f, bg=G["panel"])
+        pay_btns_f.pack(fill=X)
+        self.pay_btns = {}
+        for method, icon in [("Cash", "💵"), ("Card", "💳"),
+                              ("Mobile", "📱"), ("Crypto", "₿")]:
+            b = Button(pay_btns_f, text=f"{icon} {method}",
+                       font=("Segoe UI", 9, "bold"),
+                       command=lambda m=method: self._select_pay(m),
+                       relief=FLAT, cursor="hand2", bd=0,
+                       padx=8, pady=6)
+            b.pack(side=LEFT, padx=(0, 4))
+            self.pay_btns[method] = b
+        self._select_pay("Cash")
+ 
+        # Checkout button
+        self.checkout_btn = Button(cart_panel,
+                                   text="Charge $0.00  →",
+                                   font=("Segoe UI", 13, "bold"),
+                                   command=self._checkout,
+                                   bg=G["accent"], fg="#FFF",
+                                   activebackground=G["accent_dark"],
+                                   activeforeground="#FFF",
+                                   relief=FLAT, cursor="hand2",
+                                   bd=0, pady=14)
+        self.checkout_btn.pack(fill=X, padx=12, pady=(4, 12))
+ 
+    def _total_row(self, parent, label, value, big=False, color=None):
+        f = Frame(parent, bg=G["panel"])
+        f.pack(fill=X, pady=2)
+        font_l = ("Segoe UI", 11 if big else 9, "bold" if big else "normal")
+        font_v = ("Segoe UI", 14 if big else 10, "bold")
+        Label(f, text=label, font=font_l,
+              bg=G["panel"], fg=G["txt"] if big else G["txt2"]).pack(side=LEFT)
+        lbl = Label(f, text=value, font=font_v,
+                    bg=G["panel"], fg=color or G["txt"])
+        lbl.pack(side=RIGHT)
+        return lbl
+ 
+    def _select_pay(self, method):
+        self.pay_method.set(method)
+        for m, b in self.pay_btns.items():
+            if m == method:
+                b.config(bg=G["accent"], fg="#FFF")
             else:
-                query = "SELECT id, barcode, name, price, quantity, unit FROM products ORDER BY name"
-                params = ()
+                b.config(bg=G["card"], fg=G["txt2"])
+ 
+    # ── CATEGORIES ────────────────────────────
+    def _load_categories(self):
+        cats = self.db.fetch_all("SELECT name FROM categories ORDER BY name")
+        self._cat_list = ["All"] + [c[0] for c in cats]
+        self._active_cat = "All"
+ 
+        for w in self.cat_frame.winfo_children():
+            w.destroy()
+ 
+        for cat in self._cat_list:
+            active = (cat == self._active_cat)
+            b = Button(self.cat_frame,
+                       text=cat,
+                       font=("Segoe UI", 9, "bold" if active else "normal"),
+                       relief=FLAT, cursor="hand2", bd=0,
+                       padx=12, pady=5,
+                       command=lambda c=cat: self._select_cat(c))
+            if active:
+                b.config(bg=G["accent"], fg="#FFF")
+            else:
+                b.config(bg=G["panel"], fg=G["txt2"],
+                         activebackground=G["card"], activeforeground=G["txt"])
+            b.pack(side=LEFT, padx=(0, 4))
+ 
+    def _select_cat(self, cat):
+        self._active_cat = cat
+        self._load_categories()
+        self._load_products()
+ 
+    # ── PRODUCTS ──────────────────────────────
+    def _load_products(self, *_):
+        for item in self.prod_tree.get_children():
+            self.prod_tree.delete(item)
+ 
+        raw_search = self.search_var.get()
+        search = "" if raw_search == "Search products..." else raw_search.strip()
+        cat = self._active_cat
+ 
+        if cat == "All":
+            if search:
+                q = """SELECT p.id, p.barcode, p.name, c.name, p.price, p.quantity, p.unit
+                       FROM products p LEFT JOIN categories c ON p.category_id = c.id
+                       WHERE p.name LIKE ? OR p.barcode LIKE ? ORDER BY p.name"""
+                rows = self.db.fetch_all(q, (f"%{search}%", f"%{search}%"))
+            else:
+                q = """SELECT p.id, p.barcode, p.name, c.name, p.price, p.quantity, p.unit
+                       FROM products p LEFT JOIN categories c ON p.category_id = c.id
+                       ORDER BY p.name"""
+                rows = self.db.fetch_all(q)
         else:
             if search:
-                query = """SELECT p.id, p.barcode, p.name, p.price, p.quantity, p.unit 
-                          FROM products p 
-                          JOIN categories c ON p.category_id = c.id
-                          WHERE c.name = ? AND (p.name LIKE ? OR p.barcode LIKE ?)
-                          ORDER BY p.name"""
-                params = (category, f"%{search}%", f"%{search}%")
+                q = """SELECT p.id, p.barcode, p.name, c.name, p.price, p.quantity, p.unit
+                       FROM products p JOIN categories c ON p.category_id = c.id
+                       WHERE c.name=? AND (p.name LIKE ? OR p.barcode LIKE ?) ORDER BY p.name"""
+                rows = self.db.fetch_all(q, (cat, f"%{search}%", f"%{search}%"))
             else:
-                query = """SELECT p.id, p.barcode, p.name, p.price, p.quantity, p.unit 
-                          FROM products p 
-                          JOIN categories c ON p.category_id = c.id
-                          WHERE c.name = ?
-                          ORDER BY p.name"""
-                params = (category,)
-        
-        products = self.db.fetch_all(query, params)
-        
-        for product in products:
-            self.product_tree.insert("", END, values=product)
-    
-    def add_to_cart(self):
-        selected = self.product_tree.selection()
-        if not selected:
-            messagebox.showwarning("Warning", "Please select a product first!")
+                q = """SELECT p.id, p.barcode, p.name, c.name, p.price, p.quantity, p.unit
+                       FROM products p JOIN categories c ON p.category_id = c.id
+                       WHERE c.name=? ORDER BY p.name"""
+                rows = self.db.fetch_all(q, (cat,))
+ 
+        for i, row in enumerate(rows):
+            tag = "odd" if i % 2 else "even"
+            tags = [tag]
+            if row[5] is not None and row[5] <= 3:
+                tags.append("low")
+            self.prod_tree.insert("", END, values=row, tags=tags)
+ 
+        self.prod_count_lbl.config(text=f"{len(rows)} products")
+ 
+    def _barcode_lookup(self, event=None):
+        bc = self.barcode_var.get().strip()
+        if not bc:
             return
-        
-        item = self.product_tree.item(selected[0])
-        values = item['values']
-        
-        # Explicitly cast types to ensure arithmetic and comparisons work
-        product_id = int(values[0])
-        name = str(values[2])
-        price = float(values[3])
-        stock = int(values[4])
-        
-        if stock <= 0:
-            messagebox.showwarning("Warning", f"{name} is out of stock!")
-            return
-        
-        # Check if product already in cart
-        for cart_item in self.cart:
-            if cart_item['id'] == product_id:
-                if cart_item['quantity'] + 1 > stock:
-                    messagebox.showwarning("Warning", f"Only {stock} units available!")
+        row = self.db.fetch_one(
+            "SELECT id FROM products WHERE barcode=?", (bc,))
+        if row:
+            for item in self.prod_tree.get_children():
+                if self.prod_tree.item(item)["values"][0] == row[0]:
+                    self.prod_tree.selection_set(item)
+                    self.prod_tree.focus(item)
+                    self._add_to_cart()
+                    self.barcode_var.set("")
                     return
-                cart_item['quantity'] += 1
-                cart_item['total'] = cart_item['quantity'] * cart_item['price']
-                self.update_cart_display()
-                self.update_total()
-                self.status_bar.config(text=f"Added {name} to cart")
+        else:
+            self.toast.show(f"Barcode not found: {bc}")
+        self.barcode_var.set("")
+ 
+    # ── CART ──────────────────────────────────
+    def _add_to_cart(self):
+        sel = self.prod_tree.selection()
+        if not sel:
+            messagebox.showwarning("Warning", "Select a product first.")
+            return
+        vals = self.prod_tree.item(sel[0])["values"]
+        pid   = int(vals[0])
+        name  = str(vals[2])
+        price = float(vals[4])
+        stock = int(vals[5]) if vals[5] is not None else 0
+ 
+        if stock <= 0:
+            messagebox.showwarning("Out of Stock", f"{name} is out of stock.")
+            return
+ 
+        for item in self.cart:
+            if item["id"] == pid:
+                if item["qty"] + 1 > stock:
+                    messagebox.showwarning("Stock Limit", f"Only {stock} units available.")
+                    return
+                item["qty"] += 1
+                item["total"] = item["qty"] * item["price"]
+                self._refresh_cart()
+                self.toast.show(f"+ {name}")
                 return
-        
-        # Add new item to cart
-        self.cart.append({
-            'id': product_id,
-            'name': name,
-            'price': price,
-            'quantity': 1,
-            'total': price,
-            'stock': stock
-        })
-        
-        self.update_cart_display()
-        self.update_total()
-        self.status_bar.config(text=f"Added {name} to cart")
-    
-    def update_cart_display(self):
-        # Clear cart tree
+ 
+        self.cart.append({"id": pid, "name": name, "price": price,
+                          "qty": 1, "total": price, "stock": stock})
+        self._refresh_cart()
+        self.toast.show(f"Added {name}")
+ 
+    def _refresh_cart(self):
         for item in self.cart_tree.get_children():
             self.cart_tree.delete(item)
-        
-        # Add items from cart
-        for idx, item in enumerate(self.cart):
-            self.cart_tree.insert("", END, values=(idx+1, item['name'], item['quantity'], 
-                                                   f"${item['price']:.2f}", f"${item['total']:.2f}"))
-    
-    def update_total(self):
-        total = sum(item['total'] for item in self.cart)
-        self.total_label.config(text=f"Total: ${total:.2f}")
-        return total
-    
-    def remove_from_cart(self):
-        selected = self.cart_tree.selection()
-        if not selected:
-            messagebox.showwarning("Warning", "Please select an item to remove!")
+        for i, it in enumerate(self.cart):
+            tag = "odd" if i % 2 else "even"
+            self.cart_tree.insert("", END,
+                values=(i+1, it["name"], it["qty"],
+                        f"${it['price']:.2f}", f"${it['total']:.2f}"),
+                tags=(tag,))
+        self._update_totals()
+ 
+    def _update_totals(self):
+        subtotal = sum(i["total"] for i in self.cart)
+        tax      = subtotal * 0.16
+        grand    = subtotal + tax
+ 
+        self.subtotal_lbl.config(text=f"${subtotal:.2f}")
+        self.tax_lbl.config(text=f"${tax:.2f}")
+        self.grand_lbl.config(text=f"${grand:.2f}")
+        self.checkout_btn.config(text=f"Charge ${grand:.2f}  →")
+        n = sum(i["qty"] for i in self.cart)
+        self.cart_count_lbl.config(text=f"{n} item{'s' if n != 1 else ''}")
+        self.status_var.set(f"Cart: {n} items  |  Total: ${grand:.2f}")
+        return grand
+ 
+    def _remove_from_cart(self):
+        sel = self.cart_tree.selection()
+        if not sel:
+            messagebox.showwarning("Warning", "Select a cart item first.")
             return
-        
-        index = int(self.cart_tree.item(selected[0])['values'][0]) - 1
-        removed_item = self.cart.pop(index)
-        self.update_cart_display()
-        self.update_total()
-        self.status_bar.config(text=f"Removed {removed_item['name']} from cart")
-    
-    def clear_cart(self):
-        if self.cart and messagebox.askyesno("Confirm", "Clear entire cart?"):
+        idx = int(self.cart_tree.item(sel[0])["values"][0]) - 1
+        removed = self.cart.pop(idx)
+        self._refresh_cart()
+        self.toast.show(f"Removed {removed['name']}")
+ 
+    def _clear_cart(self):
+        if self.cart and messagebox.askyesno("Clear Cart", "Remove all items?"):
             self.cart.clear()
-            self.update_cart_display()
-            self.update_total()
-            self.status_bar.config(text="Cart cleared")
-    
-    def update_quantity(self):
-        selected = self.cart_tree.selection()
-        if not selected:
-            messagebox.showwarning("Warning", "Please select an item to update!")
+            self._refresh_cart()
+            self.toast.show("Cart cleared")
+ 
+    def _update_quantity(self):
+        sel = self.cart_tree.selection()
+        if not sel:
+            messagebox.showwarning("Warning", "Select a cart item first.")
             return
-        
-        index = int(self.cart_tree.item(selected[0])['values'][0]) - 1
-        item = self.cart[index]
-        
-        new_qty = simpledialog.askinteger("Update Quantity", f"Enter new quantity for {item['name']}:",
-                                          initialvalue=item['quantity'], minvalue=1, maxvalue=item['stock'])
-        
+        idx  = int(self.cart_tree.item(sel[0])["values"][0]) - 1
+        item = self.cart[idx]
+        new_qty = simpledialog.askinteger(
+            "Update Qty", f"New quantity for {item['name']}:",
+            initialvalue=item["qty"], minvalue=1, maxvalue=item["stock"])
         if new_qty:
-            item['quantity'] = new_qty
-            item['total'] = item['quantity'] * item['price']
-            self.update_cart_display()
-            self.update_total()
-            self.status_bar.config(text=f"Updated {item['name']} quantity to {new_qty}")
-    
-    def checkout(self):
+            item["qty"]   = new_qty
+            item["total"] = new_qty * item["price"]
+            self._refresh_cart()
+            self.toast.show(f"Updated {item['name']} → {new_qty}")
+ 
+    # ── CHECKOUT ──────────────────────────────
+    def _checkout(self):
         if not self.cart:
-            messagebox.showwarning("Warning", "Cart is empty!")
+            messagebox.showwarning("Empty Cart", "Add items before checkout.")
             return
-        
-        # Create checkout window
-        checkout_win = Toplevel(self.root)
-        checkout_win.title("Checkout")
-        checkout_win.geometry("400x300")
-        checkout_win.transient(self.root)
-        checkout_win.grab_set()
-        
-        # Center the window
-        checkout_win.update_idletasks()
-        x = (checkout_win.winfo_screenwidth() // 2) - (400 // 2)
-        y = (checkout_win.winfo_screenheight() // 2) - (300 // 2)
-        checkout_win.geometry(f'400x300+{x}+{y}')
-        
-        total = self.update_total()
-        
-        Label(checkout_win, text=f"Total Amount: ${total:.2f}", font=("Arial", 16, "bold")).pack(pady=20)
-        
-        # Payment method
-        Label(checkout_win, text="Payment Method:", font=("Arial", 12)).pack()
-        payment_var = StringVar(value="Cash")
-        payment_combo = ttk.Combobox(checkout_win, textvariable=payment_var, values=["Cash", "Card", "Mobile Payment"], state="readonly")
-        payment_combo.pack(pady=5)
-        
+ 
+        win = Toplevel(self.root)
+        win.title("Checkout")
+        win.geometry("420x340")
+        win.resizable(False, False)
+        win.configure(bg=G["shell"])
+        win.transient(self.root)
+        win.grab_set()
+        self._center_win(win, 420, 340)
+ 
+        grand = self._update_totals()
+ 
+        panel = Frame(win, bg=G["panel"],
+                      highlightbackground=G["border"], highlightthickness=1,
+                      padx=28, pady=24)
+        panel.place(relx=0.5, rely=0.5, anchor=CENTER, width=380, height=300)
+ 
+        Label(panel, text="Complete Sale", font=("Segoe UI", 14, "bold"),
+              bg=G["panel"], fg=G["txt"]).pack(pady=(0, 16))
+ 
+        # Total display
+        total_card = Frame(panel, bg=G["card"],
+                           highlightbackground=G["border_light"], highlightthickness=1)
+        total_card.pack(fill=X, pady=(0, 14))
+        Label(total_card, text=f"${grand:.2f}", font=("Segoe UI", 28, "bold"),
+              bg=G["card"], fg=G["accent"], pady=8).pack()
+        Label(total_card, text=f"Payment: {self.pay_method.get()}",
+              font=("Segoe UI", 10), bg=G["card"], fg=G["txt2"]).pack(pady=(0, 8))
+ 
         # Amount paid
-        Label(checkout_win, text="Amount Paid:", font=("Arial", 12)).pack(pady=(10,0))
-        paid_entry = Entry(checkout_win, font=("Arial", 14), width=20)
-        paid_entry.pack(pady=5)
-        paid_entry.insert(0, f"{total:.2f}")
-        
-        change_label = Label(checkout_win, text="Change: $0.00", font=("Arial", 12))
-        change_label.pack(pady=5)
-        
-        def calculate_change(*args):
+        row = Frame(panel, bg=G["panel"])
+        row.pack(fill=X, pady=4)
+        Label(row, text="Amount Paid:", font=("Segoe UI", 10),
+              bg=G["panel"], fg=G["txt2"]).pack(side=LEFT)
+        paid_e = Entry(row, font=("Segoe UI", 13), width=14, relief=FLAT,
+                       bg=G["input_bg"], fg=G["txt"],
+                       insertbackground=G["accent"],
+                       highlightbackground=G["border"], highlightthickness=1,
+                       highlightcolor=G["accent"])
+        paid_e.pack(side=RIGHT, ipady=6)
+        paid_e.insert(0, f"{grand:.2f}")
+ 
+        change_lbl = Label(panel, text="Change: $0.00",
+                           font=("Segoe UI", 11, "bold"),
+                           bg=G["panel"], fg=G["green"])
+        change_lbl.pack(pady=4)
+ 
+        def calc_change(*_):
             try:
-                val = paid_entry.get()
-                if not val:
-                    val = "0"
-                paid = float(val)
-                change = paid - total
-                change_label.config(text=f"Change: ${change:.2f}" if change >= 0 else f"Short: ${-change:.2f}")
-            except:
-                change_label.config(text="Change: $0.00")
-        
-        paid_entry.bind('<KeyRelease>', calculate_change)
-        
-        def complete_sale():
+                paid = float(paid_e.get())
+                diff = paid - grand
+                if diff >= 0:
+                    change_lbl.config(text=f"Change: ${diff:.2f}", fg=G["green"])
+                else:
+                    change_lbl.config(text=f"Short: ${-diff:.2f}", fg=G["red"])
+            except ValueError:
+                change_lbl.config(text="Change: —", fg=G["txt3"])
+ 
+        paid_e.bind("<KeyRelease>", calc_change)
+        calc_change()
+ 
+        def complete():
             try:
-                paid = float(paid_entry.get())
-                if paid < total:
-                    messagebox.showerror("Error", "Insufficient payment amount!")
-                    return
-                
-                change = paid - total
-                payment_method = payment_var.get()
-                
-                # Generate invoice number
-                invoice_no = f"INV-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}"
-                
-                # Save sale
-                self.db.execute_query("""
-                    INSERT INTO sales (invoice_no, user_id, total, paid, change, payment_method)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, (invoice_no, self.user_id, total, paid, change, payment_method))
-                
-                sale_id = self.db.cursor.lastrowid
-                
-                # Save sale items and update stock
-                for item in self.cart:
-                    self.db.execute_query("""
-                        INSERT INTO sale_items (sale_id, product_id, quantity, price, total)
-                        VALUES (?, ?, ?, ?, ?)
-                    """, (sale_id, item['id'], item['quantity'], item['price'], item['total']))
-                    
-                    # Update stock
-                    self.db.execute_query("""
-                        UPDATE products SET quantity = quantity - ? WHERE id = ?
-                    """, (item['quantity'], item['id']))
-                
-                # Generate receipt
-                self.generate_receipt(invoice_no, sale_id)
-                
-                messagebox.showinfo("Success", f"Sale completed!\nInvoice: {invoice_no}\nChange: ${change:.2f}")
-                
-                # Clear cart and refresh products
-                self.cart.clear()
-                self.update_cart_display()
-                self.update_total()
-                self.load_products()
-                checkout_win.destroy()
-                
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to complete sale: {str(e)}")
-        
-        Button(checkout_win, text="Complete Sale", command=complete_sale, 
-               bg=THEMES[self.theme_name]["accent"], fg="white", font=("Arial", 12), padx=20, pady=10).pack(pady=20)
-
-        self.apply_theme_to_widget(checkout_win, THEMES[self.theme_name])
-
-    
-    def generate_receipt(self, invoice_no, sale_id):
-        # Get sale details
-        sale = self.db.fetch_one("SELECT * FROM sales WHERE id=?", (sale_id,))
-        items = self.db.fetch_all("""
-            SELECT p.name, si.quantity, si.price, si.total 
-            FROM sale_items si
-            JOIN products p ON si.product_id = p.id
-            WHERE si.sale_id=?
-        """, (sale_id,))
-        
-        # Create PDF receipt
+                paid = float(paid_e.get())
+            except ValueError:
+                messagebox.showerror("Error", "Enter a valid amount.", parent=win)
+                return
+            if paid < grand:
+                messagebox.showerror("Error", "Insufficient payment.", parent=win)
+                return
+            change = paid - grand
+            inv_no = f"INV-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}"
+            self.db.execute_query(
+                "INSERT INTO sales (invoice_no, user_id, total, paid, change, payment_method) VALUES (?,?,?,?,?,?)",
+                (inv_no, self.user_id, grand, paid, change, self.pay_method.get()))
+            sale_id = self.db.cursor.lastrowid
+            for it in self.cart:
+                self.db.execute_query(
+                    "INSERT INTO sale_items (sale_id, product_id, quantity, price, total) VALUES (?,?,?,?,?)",
+                    (sale_id, it["id"], it["qty"], it["price"], it["total"]))
+                self.db.execute_query(
+                    "UPDATE products SET quantity = quantity - ? WHERE id=?",
+                    (it["qty"], it["id"]))
+            self._generate_receipt(inv_no, sale_id)
+            self.cart.clear()
+            self._refresh_cart()
+            self._load_products()
+            win.destroy()
+            self.toast.show(f"✓ Sale complete — Change ${change:.2f}")
+            messagebox.showinfo("Sale Complete",
+                                f"Invoice: {inv_no}\nChange: ${change:.2f}")
+ 
+        Button(panel, text=f"Complete Sale  →",
+               font=("Segoe UI", 12, "bold"),
+               command=complete,
+               bg=G["accent"], fg="#FFF",
+               activebackground=G["accent_dark"], activeforeground="#FFF",
+               relief=FLAT, cursor="hand2", bd=0, pady=10).pack(fill=X, pady=(10, 0))
+ 
+    # ── RECEIPT ───────────────────────────────
+    def _generate_receipt(self, invoice_no, sale_id):
+        sale  = self.db.fetch_one("SELECT * FROM sales WHERE id=?", (sale_id,))
+        items = self.db.fetch_all(
+            """SELECT p.name, si.quantity, si.price, si.total
+               FROM sale_items si JOIN products p ON si.product_id = p.id
+               WHERE si.sale_id=?""", (sale_id,))
+ 
         filename = f"receipt_{invoice_no}.pdf"
         doc = SimpleDocTemplate(filename, pagesize=letter)
-        story = []
-        
         styles = getSampleStyleSheet()
-        title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=24, alignment=1, spaceAfter=30)
-        header_style = ParagraphStyle('Header', parent=styles['Normal'], fontSize=12, alignment=1)
-        
-        # Header
-        story.append(Paragraph("myPOS System", title_style))
-        story.append(Paragraph("Your Store Name Here", header_style))
-        story.append(Paragraph("123 Business Street, City", header_style))
-        story.append(Paragraph("Tel: (555) 123-4567", header_style))
-        story.append(Spacer(1, 20))
-        
-        # Receipt info
-        story.append(Paragraph(f"Invoice: {invoice_no}", styles['Normal']))
-        story.append(Paragraph(f"Date: {sale[6]}", styles['Normal']))
-        story.append(Paragraph(f"Cashier: {self.full_name}", styles['Normal']))
-        story.append(Spacer(1, 20))
-        
-        # Items table
-        data = [["Item", "Qty", "Price", "Total"]]
-        for item in items:
-            data.append([item[0], str(item[1]), f"${item[2]:.2f}", f"${item[3]:.2f}"])
-        
-        table = Table(data)
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 12),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        title_s = ParagraphStyle("T", parent=styles["Heading1"], fontSize=22,
+                                  alignment=1, spaceAfter=20)
+        sub_s   = ParagraphStyle("S", parent=styles["Normal"], fontSize=11,
+                                  alignment=1, spaceAfter=4)
+        story = [
+            Paragraph("myPOS", title_s),
+            Paragraph("Your Store Name", sub_s),
+            Paragraph("123 Business Street · (555) 123-4567", sub_s),
+            Spacer(1, 16),
+            Paragraph(f"Invoice: {invoice_no}", styles["Normal"]),
+            Paragraph(f"Date: {sale[6]}", styles["Normal"]),
+            Paragraph(f"Cashier: {self.full_name}", styles["Normal"]),
+            Paragraph(f"Payment: {sale[7]}", styles["Normal"]),
+            Spacer(1, 16),
+        ]
+        data = [["Item", "Qty", "Unit Price", "Total"]]
+        for it in items:
+            data.append([it[0], str(it[1]), f"${it[2]:.2f}", f"${it[3]:.2f}"])
+        tbl = Table(data, colWidths=[220, 60, 100, 100])
+        tbl.setStyle(TableStyle([
+            ("BACKGROUND",  (0,0), (-1,0), colors.HexColor("#5E6FFF")),
+            ("TEXTCOLOR",   (0,0), (-1,0), colors.white),
+            ("FONTNAME",    (0,0), (-1,0), "Helvetica-Bold"),
+            ("FONTSIZE",    (0,0), (-1,0), 11),
+            ("BOTTOMPADDING",(0,0),(-1,0), 10),
+            ("BACKGROUND",  (0,1), (-1,-1), colors.HexColor("#F0F4FF")),
+            ("GRID",        (0,0), (-1,-1), 0.5, colors.HexColor("#C0CAFF")),
+            ("ALIGN",       (1,0), (-1,-1), "CENTER"),
         ]))
-        
-        story.append(table)
-        story.append(Spacer(1, 20))
-        
-        # Totals
-        story.append(Paragraph(f"Total: ${sale[3]:.2f}", styles['Normal']))
-        story.append(Paragraph(f"Paid: ${sale[4]:.2f}", styles['Normal']))
-        story.append(Paragraph(f"Change: ${sale[5]:.2f}", styles['Normal']))
-        story.append(Paragraph(f"Payment: {sale[7]}", styles['Normal']))
-        story.append(Spacer(1, 20))
-        
-        # Footer
-        story.append(Paragraph("Thank you for shopping with us!", styles['Normal']))
-        story.append(Paragraph("Have a great day!", styles['Normal']))
-        
+        story.append(tbl)
+        story.append(Spacer(1, 16))
+        story += [
+            Paragraph(f"Subtotal: ${sale[3]/1.16:.2f}", styles["Normal"]),
+            Paragraph(f"Tax (16%): ${sale[3] - sale[3]/1.16:.2f}", styles["Normal"]),
+            Paragraph(f"<b>Total: ${sale[3]:.2f}</b>", styles["Normal"]),
+            Paragraph(f"Paid: ${sale[4]:.2f}", styles["Normal"]),
+            Paragraph(f"Change: ${sale[5]:.2f}", styles["Normal"]),
+            Spacer(1, 20),
+            Paragraph("Thank you for shopping with us!", styles["Normal"]),
+        ]
         doc.build(story)
-        self.status_bar.config(text=f"Receipt saved: {filename}")
-
-        # Automatically open the PDF for preview and printing (merged duplicate)
+        self.status_var.set(f"Receipt saved: {filename}")
         try:
             os.startfile(filename)
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not open receipt: {e}")
-    
-    def change_password(self):
-        change_win = Toplevel(self.root)
-        change_win.title("Change Password")
-        change_win.geometry("300x200")
-        change_win.transient(self.root)
-        change_win.grab_set()
-        
-        Label(change_win, text="Current Password:").pack(pady=(20,5))
-        current_entry = Entry(change_win, show="*")
-        current_entry.pack()
-        
-        Label(change_win, text="New Password:").pack(pady=(10,5))
-        new_entry = Entry(change_win, show="*")
-        new_entry.pack()
-        
-        Label(change_win, text="Confirm Password:").pack(pady=(10,5))
-        confirm_entry = Entry(change_win, show="*")
-        confirm_entry.pack()
-        
-        def change():
-            current_hash = hashlib.sha256(current_entry.get().encode()).hexdigest()
-            user_check = self.db.fetch_one("SELECT id FROM users WHERE id=? AND password=?", (self.user_id, current_hash))
-            
-            if not user_check:
-                messagebox.showerror("Error", "Current password is incorrect!")
+        except Exception:
+            pass
+ 
+    # ── REPORTS ───────────────────────────────
+    def _daily_sales(self):
+        win = self._report_win("Daily Sales Report", 700, 440)
+        today = datetime.datetime.now().strftime("%Y-%m-%d")
+        rows = self.db.fetch_all(
+            """SELECT s.invoice_no, s.total, s.sale_date, s.payment_method, u.full_name
+               FROM sales s JOIN users u ON s.user_id = u.id
+               WHERE DATE(s.sale_date)=? ORDER BY s.sale_date DESC""", (today,))
+ 
+        Label(win, text=f"Date: {today}", font=("Segoe UI", 10),
+              bg=G["panel"], fg=G["txt2"]).pack(padx=14, anchor=W)
+ 
+        cols = ("Invoice", "Total", "Time", "Payment", "Cashier")
+        tree = self._make_report_tree(win, cols, {c: 120 for c in cols})
+        total = 0
+        for r in rows:
+            tree.insert("", END,
+                values=(r[0], f"${r[1]:.2f}", r[2][11:16], r[3], r[4]))
+            total += r[1]
+ 
+        Label(win, text=f"Total Sales: ${total:.2f}",
+              font=("Segoe UI", 13, "bold"),
+              bg=G["panel"], fg=G["accent"]).pack(pady=10)
+ 
+    def _inventory_report(self):
+        win = self._report_win("Inventory Report", 860, 520)
+        rows = self.db.fetch_all(
+            """SELECT p.name, c.name, p.price, p.quantity, p.min_stock, p.unit
+               FROM products p JOIN categories c ON p.category_id = c.id
+               ORDER BY c.name, p.name""")
+ 
+        cols = ("Product", "Category", "Price", "Stock", "Min", "Unit", "Status")
+        widths = {"Product": 200, "Category": 120, "Price": 80,
+                  "Stock": 70, "Min": 60, "Unit": 70, "Status": 90}
+        tree = self._make_report_tree(win, cols, widths)
+        tree.tag_configure("low", foreground=G["red"])
+ 
+        low = []
+        for r in rows:
+            status = "Low Stock" if r[3] <= r[4] else "OK"
+            tags = ("low",) if r[3] <= r[4] else ()
+            tree.insert("", END,
+                values=(r[0], r[1], f"${r[2]:.2f}", r[3], r[4], r[5] or "", status),
+                tags=tags)
+            if r[3] <= r[4]:
+                low.append(r[0])
+ 
+        if low:
+            Label(win, text=f"⚠  Low stock: {', '.join(low)}",
+                  font=("Segoe UI", 9), bg=G["panel"],
+                  fg=G["red"], wraplength=800).pack(padx=14, pady=6, anchor=W)
+ 
+    def _sales_history(self):
+        win = self._report_win("Sales History", 860, 520)
+ 
+        # Filter row
+        ff = Frame(win, bg=G["panel"])
+        ff.pack(fill=X, padx=14, pady=8)
+        Label(ff, text="From:", font=("Segoe UI", 10),
+              bg=G["panel"], fg=G["txt2"]).pack(side=LEFT)
+        from_e = Entry(ff, width=12, font=("Segoe UI", 10), relief=FLAT,
+                       bg=G["input_bg"], fg=G["txt"],
+                       highlightbackground=G["border"], highlightthickness=1)
+        from_e.pack(side=LEFT, padx=4, ipady=4)
+        from_e.insert(0, datetime.datetime.now().strftime("%Y-%m-%d"))
+ 
+        Label(ff, text="To:", font=("Segoe UI", 10),
+              bg=G["panel"], fg=G["txt2"]).pack(side=LEFT, padx=(8, 0))
+        to_e = Entry(ff, width=12, font=("Segoe UI", 10), relief=FLAT,
+                     bg=G["input_bg"], fg=G["txt"],
+                     highlightbackground=G["border"], highlightthickness=1)
+        to_e.pack(side=LEFT, padx=4, ipady=4)
+        to_e.insert(0, datetime.datetime.now().strftime("%Y-%m-%d"))
+ 
+        cols = ("Invoice", "Date", "Total", "Cashier", "Payment")
+        tree = self._make_report_tree(win, cols, {c: 150 for c in cols})
+ 
+        def load():
+            for i in tree.get_children():
+                tree.delete(i)
+            rows = self.db.fetch_all(
+                """SELECT s.invoice_no, s.sale_date, s.total, u.full_name, s.payment_method
+                   FROM sales s JOIN users u ON s.user_id = u.id
+                   WHERE DATE(s.sale_date) BETWEEN ? AND ? ORDER BY s.sale_date DESC""",
+                (from_e.get(), to_e.get()))
+            for r in rows:
+                tree.insert("", END,
+                    values=(r[0], r[1][:19], f"${r[2]:.2f}", r[3], r[4]))
+ 
+        def reprint():
+            sel = tree.selection()
+            if not sel:
+                messagebox.showwarning("Warning", "Select a sale.", parent=win)
                 return
-            
-            if new_entry.get() != confirm_entry.get():
-                messagebox.showerror("Error", "New passwords do not match!")
-                return
-            
-            if len(new_entry.get()) < 4:
-                messagebox.showerror("Error", "Password must be at least 4 characters!")
-                return
-            
-            new_hash = hashlib.sha256(new_entry.get().encode()).hexdigest()
-            self.db.execute_query("UPDATE users SET password=? WHERE id=?", (new_hash, self.user_id))
-            messagebox.showinfo("Success", "Password changed successfully!")
-            change_win.destroy()
-        
-        Button(change_win, text="Change Password", command=change, bg=THEMES[self.theme_name]["accent"], fg="white").pack(pady=20)
-        self.apply_theme_to_widget(change_win, THEMES[self.theme_name])
-
-    
-    def daily_sales_report(self):
-        report_win = Toplevel(self.root)
-        report_win.title("Daily Sales Report")
-        report_win.geometry("600x400")
-        
-        # Get today's sales
-        today = datetime.datetime.now().strftime('%Y-%m-%d')
-        sales = self.db.fetch_all("""
-            SELECT invoice_no, total, sale_date, payment_method, full_name
-            FROM sales s
-            JOIN users u ON s.user_id = u.id
-            WHERE DATE(sale_date) = ?
-            ORDER BY sale_date DESC
-        """, (today,))
-        
-        # Display report
-        tree = ttk.Treeview(report_win, columns=("Invoice", "Total", "Time", "Payment", "Cashier"), show="headings")
-        for col in ("Invoice", "Total", "Time", "Payment", "Cashier"):
+            inv = tree.item(sel[0])["values"][0]
+            rec = self.db.fetch_one("SELECT id FROM sales WHERE invoice_no=?", (inv,))
+            if rec:
+                self._generate_receipt(inv, rec[0])
+ 
+        Button(ff, text="Load", font=("Segoe UI", 9, "bold"),
+               command=load, bg=G["accent"], fg="#FFF",
+               relief=FLAT, cursor="hand2", bd=0, padx=14, pady=5).pack(side=LEFT, padx=8)
+        Button(ff, text="Reprint Selected", font=("Segoe UI", 9, "bold"),
+               command=reprint, bg=G["amber"], fg="#FFF",
+               relief=FLAT, cursor="hand2", bd=0, padx=14, pady=5).pack(side=LEFT)
+        load()
+ 
+    def _report_win(self, title, w, h):
+        win = Toplevel(self.root)
+        win.title(title)
+        win.geometry(f"{w}x{h}")
+        win.configure(bg=G["panel"])
+        self._center_win(win, w, h)
+        Label(win, text=title, font=("Segoe UI", 13, "bold"),
+              bg=G["topbar"], fg=G["txt"], pady=10).pack(fill=X, padx=0)
+        return win
+ 
+    def _make_report_tree(self, parent, cols, widths):
+        f = Frame(parent, bg=G["panel"])
+        f.pack(fill=BOTH, expand=True, padx=14, pady=8)
+        tree = ttk.Treeview(f, columns=cols, show="headings",
+                            style="Glass.Treeview", selectmode="browse")
+        for col in cols:
             tree.heading(col, text=col)
-            tree.column(col, width=100)
-        tree.pack(side=LEFT, fill=BOTH, expand=True, padx=(10, 0), pady=10)
-
-        scroll = ttk.Scrollbar(report_win, orient=VERTICAL, command=tree.yview)
-        tree.configure(yscrollcommand=scroll.set)
-        scroll.pack(side=RIGHT, fill=Y, pady=10, padx=(0, 10))
-
-        total_sales = 0
-        for sale in sales:
-            tree.insert("", END, values=(sale[0], f"${sale[1]:.2f}", sale[2][11:16], sale[3], sale[4]))
-            total_sales += sale[1]
-        
-        Label(report_win, text=f"Total Sales Today: ${total_sales:.2f}", 
-              font=("Arial", 14, "bold")).pack(pady=10)
-        self.apply_theme_to_widget(report_win, THEMES[self.theme_name])
-    
-    def inventory_report(self):
-        report_win = Toplevel(self.root)
-        report_win.title("Inventory Report")
-        report_win.geometry("800x500")
-        
-        # Get inventory data
-        products = self.db.fetch_all("""
-            SELECT p.name, c.name, p.price, p.quantity, p.min_stock, p.unit
-            FROM products p
-            JOIN categories c ON p.category_id = c.id
-            ORDER BY c.name, p.name
-        """)
-        
-        tree = ttk.Treeview(report_win, columns=("Product", "Category", "Price", "Stock", "Min Stock", "Unit", "Status"), show="headings")
-        for col in ("Product", "Category", "Price", "Stock", "Min Stock", "Unit", "Status"):
-            tree.heading(col, text=col)
-            tree.column(col, width=100)
-        tree.pack(side=LEFT, fill=BOTH, expand=True, padx=(10, 0), pady=10)
-
-        scroll = ttk.Scrollbar(report_win, orient=VERTICAL, command=tree.yview)
-        tree.configure(yscrollcommand=scroll.set)
-        scroll.pack(side=RIGHT, fill=Y, pady=10, padx=(0, 10))
-        
-        low_stock_items = []
-        for product in products:
-            status = "Low Stock" if product[3] <= product[4] else "OK"
-            if product[3] <= product[4]:
-                low_stock_items.append(product[0])
-            tree.insert("", END, values=(product[0], product[1], f"${product[2]:.2f}", 
-                                        product[3], product[4], product[5], status))
-        
-        if low_stock_items:
-            Label(report_win, text=f"⚠ Low Stock Items: {', '.join(low_stock_items)}", 
-                  fg=THEMES[self.theme_name]["danger"], font=("Arial", 10, "bold")).pack(pady=5)
-        self.apply_theme_to_widget(report_win, THEMES[self.theme_name])
-    
-    def sales_history(self):
-        history_win = Toplevel(self.root)
-        history_win.title("Sales History")
-        history_win.geometry("800x500")
-        
-        # Date filter
-        filter_frame = Frame(history_win)
-        filter_frame.pack(pady=10)
-        
-        Label(filter_frame, text="From:").pack(side=LEFT)
-        from_date = Entry(filter_frame, width=12)
-        from_date.pack(side=LEFT, padx=5)
-        from_date.insert(0, datetime.datetime.now().strftime('%Y-%m-%d'))
-        
-        Label(filter_frame, text="To:").pack(side=LEFT)
-        to_date = Entry(filter_frame, width=12)
-        to_date.pack(side=LEFT, padx=5)
-        to_date.insert(0, datetime.datetime.now().strftime('%Y-%m-%d'))
-        
-        tree = ttk.Treeview(history_win, columns=("Invoice", "Date", "Total", "Cashier", "Payment"), show="headings")
-        for col in ("Invoice", "Date", "Total", "Cashier", "Payment"):
-            tree.heading(col, text=col)
-            tree.column(col, width=150)
-        tree.pack(side=LEFT, fill=BOTH, expand=True, padx=(10, 0), pady=10)
-
-        scroll = ttk.Scrollbar(history_win, orient=VERTICAL, command=tree.yview)
-        tree.configure(yscrollcommand=scroll.set)
-        scroll.pack(side=RIGHT, fill=Y, pady=10, padx=(0, 10))
-        
-        def load_history():
-            for item in tree.get_children():
-                tree.delete(item)
-            
-            sales = self.db.fetch_all("""
-                SELECT s.invoice_no, s.sale_date, s.total, u.full_name, s.payment_method
-                FROM sales s
-                JOIN users u ON s.user_id = u.id
-                WHERE DATE(s.sale_date) BETWEEN ? AND ?
-                ORDER BY s.sale_date DESC
-            """, (from_date.get(), to_date.get()))
-            
-            for sale in sales:
-                tree.insert("", END, values=(sale[0], sale[1][:19], f"${sale[2]:.2f}", sale[3], sale[4]))
-        
-        def reprint_receipt():
-            selected = tree.selection()
-            if not selected:
-                messagebox.showwarning("Warning", "Please select a sale to reprint!")
-                return
-            
-            invoice_no = tree.item(selected[0])['values'][0]
-            sale_record = self.db.fetch_one("SELECT id FROM sales WHERE invoice_no=?", (invoice_no,))
-            if sale_record:
-                self.generate_receipt(invoice_no, sale_record[0])
-            else:
-                messagebox.showerror("Error", "Sale record not found!")
-
-        Button(filter_frame, text="Load Report", command=load_history, bg=THEMES[self.theme_name]["accent2"], fg="white").pack(side=LEFT, padx=10)
-        Button(filter_frame, text="Reprint Selected", command=reprint_receipt, bg=THEMES[self.theme_name]["warning"], fg="white").pack(side=LEFT, padx=10)
-
-        load_history()
-        self.apply_theme_to_widget(history_win, THEMES[self.theme_name])
-    
-    def user_management(self):
+            tree.column(col, width=widths.get(col, 120),
+                        stretch=(col == cols[0]))
+        vsb = ttk.Scrollbar(f, orient=VERTICAL, command=tree.yview,
+                            style="GlassV.TScrollbar")
+        tree.configure(yscrollcommand=vsb.set)
+        tree.pack(side=LEFT, fill=BOTH, expand=True)
+        vsb.pack(side=RIGHT, fill=Y)
+        tree.tag_configure("odd", background=G["card"])
+        tree.tag_configure("even", background=G["panel"])
+        return tree
+ 
+    # ── MANAGEMENT ────────────────────────────
+    def _user_management(self):
         if self.role != "admin":
-            messagebox.showerror("Error", "Access denied! Admin only.")
+            messagebox.showerror("Access Denied", "Admin only.")
             return
-        
-        user_win = Toplevel(self.root)
-        user_win.title("User Management")
-        user_win.geometry("600x400")
-        
-        tree = ttk.Treeview(user_win, columns=("ID", "Username", "Role", "Full Name"), show="headings")
-        for col in ("ID", "Username", "Role", "Full Name"):
-            tree.heading(col, text=col)
-            tree.column(col, width=100)
-        tree.pack(side=LEFT, fill=BOTH, expand=True, padx=(10, 0), pady=10)
-
-        scroll = ttk.Scrollbar(user_win, orient=VERTICAL, command=tree.yview)
-        tree.configure(yscrollcommand=scroll.set)
-        scroll.pack(side=RIGHT, fill=Y, pady=10, padx=(0, 10))
-
-        def load_users():
-            for item in tree.get_children():
-                tree.delete(item)
-            users = self.db.fetch_all("SELECT id, username, role, full_name FROM users")
-            for user in users:
-                tree.insert("", END, values=user)
-        
-        def add_user():
-            add_win = Toplevel(user_win)
-            add_win.title("Add User")
-            add_win.geometry("300x300")
-            
-            Label(add_win, text="Username:").pack(pady=5)
-            username_entry = Entry(add_win)
-            username_entry.pack()
-            
-            Label(add_win, text="Password:").pack(pady=5)
-            password_entry = Entry(add_win, show="*")
-            password_entry.pack()
-            
-            Label(add_win, text="Role:").pack(pady=5)
-            role_combo = ttk.Combobox(add_win, values=["admin", "cashier"], state="readonly")
-            role_combo.pack()
-            role_combo.set("cashier")
-            
-            Label(add_win, text="Full Name:").pack(pady=5)
-            fullname_entry = Entry(add_win)
-            fullname_entry.pack()
-            
-            def save_user():
-                if not username_entry.get() or not password_entry.get():
-                    messagebox.showerror("Error", "Username and password required!")
+        win = self._report_win("User Management", 640, 440)
+        cols = ("ID", "Username", "Role", "Full Name")
+        tree = self._make_report_tree(win, cols, {"ID": 50, "Username": 150, "Role": 100, "Full Name": 200})
+ 
+        def load():
+            for i in tree.get_children():
+                tree.delete(i)
+            for u in self.db.fetch_all("SELECT id, username, role, full_name FROM users"):
+                tree.insert("", END, values=u)
+ 
+        def add():
+            aw = Toplevel(win)
+            aw.title("Add User")
+            aw.geometry("320x320")
+            aw.configure(bg=G["panel"])
+            aw.transient(win)
+            aw.grab_set()
+            self._center_win(aw, 320, 320)
+ 
+            fields = {}
+            for lbl, key, show in [("Username", "u", ""), ("Password", "p", "•"),
+                                    ("Full Name", "n", "")]:
+                Label(aw, text=lbl, font=("Segoe UI", 10),
+                      bg=G["panel"], fg=G["txt2"]).pack(pady=(10, 2))
+                e = Entry(aw, show=show, font=("Segoe UI", 11), relief=FLAT,
+                          bg=G["input_bg"], fg=G["txt"],
+                          highlightbackground=G["border"], highlightthickness=1)
+                e.pack(ipady=6, padx=24, fill=X)
+                fields[key] = e
+ 
+            Label(aw, text="Role", font=("Segoe UI", 10),
+                  bg=G["panel"], fg=G["txt2"]).pack(pady=(10, 2))
+            role_cb = ttk.Combobox(aw, values=["admin", "cashier"],
+                                   state="readonly", style="Glass.TCombobox")
+            role_cb.set("cashier")
+            role_cb.pack(padx=24, fill=X)
+ 
+            def save():
+                if not fields["u"].get() or not fields["p"].get():
+                    messagebox.showerror("Error", "Username and password required.", parent=aw)
                     return
-                
-                password_hash = hashlib.sha256(password_entry.get().encode()).hexdigest()
+                ph = hashlib.sha256(fields["p"].get().encode()).hexdigest()
                 try:
-                    self.db.execute_query("""
-                        INSERT INTO users (username, password, role, full_name)
-                        VALUES (?, ?, ?, ?)
-                    """, (username_entry.get(), password_hash, role_combo.get(), fullname_entry.get()))
-                    messagebox.showinfo("Success", "User added successfully!")
-                    load_users()
-                    add_win.destroy()
+                    self.db.execute_query(
+                        "INSERT INTO users (username, password, role, full_name) VALUES (?,?,?,?)",
+                        (fields["u"].get(), ph, role_cb.get(), fields["n"].get()))
+                    load()
+                    aw.destroy()
+                    self.toast.show("User added")
                 except sqlite3.IntegrityError:
-                    messagebox.showerror("Error", "Username already exists!")
-            
-            Button(add_win, text="Save", command=save_user, bg=THEMES[self.theme_name]["accent"], fg="white").pack(pady=20)
-            self.apply_theme_to_widget(add_win, THEMES[self.theme_name])
-
-        def delete_user():
-            selected = tree.selection()
-            if not selected:
-                messagebox.showwarning("Warning", "Please select a user to delete!")
+                    messagebox.showerror("Error", "Username exists.", parent=aw)
+ 
+            Button(aw, text="Save", font=("Segoe UI", 11, "bold"),
+                   command=save, bg=G["accent"], fg="#FFF",
+                   relief=FLAT, cursor="hand2", bd=0, pady=10).pack(
+                fill=X, padx=24, pady=16)
+ 
+        def delete():
+            sel = tree.selection()
+            if not sel:
                 return
-            
-            user_id = tree.item(selected[0])['values'][0]
-            if user_id == self.user_id:
-                messagebox.showerror("Error", "Cannot delete your own account!")
+            uid = tree.item(sel[0])["values"][0]
+            if uid == self.user_id:
+                messagebox.showerror("Error", "Cannot delete your own account.", parent=win)
                 return
-            
-            if messagebox.askyesno("Confirm", "Delete this user?"):
-                self.db.execute_query("DELETE FROM users WHERE id=?", (user_id,))
-                load_users()
-        
-        Button(user_win, text="Add User", command=add_user, bg=THEMES[self.theme_name]["accent"], fg="white").pack(side=LEFT, padx=10, pady=10)
-        Button(user_win, text="Delete User", command=delete_user, bg=THEMES[self.theme_name]["danger"], fg="white").pack(side=LEFT, padx=10, pady=10)
-
-        
-        load_users()
-        self.apply_theme_to_widget(user_win, THEMES[self.theme_name])
-    
-    def category_management(self):
+            if messagebox.askyesno("Confirm", "Delete this user?", parent=win):
+                self.db.execute_query("DELETE FROM users WHERE id=?", (uid,))
+                load()
+                self.toast.show("User deleted")
+ 
+        bf = Frame(win, bg=G["panel"])
+        bf.pack(pady=8)
+        Button(bf, text="Add User", font=("Segoe UI", 10, "bold"),
+               command=add, bg=G["accent"], fg="#FFF",
+               relief=FLAT, cursor="hand2", bd=0, padx=16, pady=7).pack(side=LEFT, padx=4)
+        Button(bf, text="Delete User", font=("Segoe UI", 10, "bold"),
+               command=delete, bg=G["red"], fg="#FFF",
+               relief=FLAT, cursor="hand2", bd=0, padx=16, pady=7).pack(side=LEFT, padx=4)
+        load()
+ 
+    def _category_management(self):
         if self.role != "admin":
-            messagebox.showerror("Error", "Access denied! Admin only.")
+            messagebox.showerror("Access Denied", "Admin only.")
             return
-        
-        cat_win = Toplevel(self.root)
-        cat_win.title("Category Management")
-        cat_win.geometry("400x300")
-        
-        tree = ttk.Treeview(cat_win, columns=("ID", "Name", "Description"), show="headings")
-        for col in ("ID", "Name", "Description"):
-            tree.heading(col, text=col)
-            tree.column(col, width=100)
-        tree.pack(side=LEFT, fill=BOTH, expand=True, padx=(10, 0), pady=10)
-
-        scroll = ttk.Scrollbar(cat_win, orient=VERTICAL, command=tree.yview)
-        tree.configure(yscrollcommand=scroll.set)
-        scroll.pack(side=RIGHT, fill=Y, pady=10, padx=(0, 10))
-
-        def load_categories():
-            for item in tree.get_children():
-                tree.delete(item)
-            categories = self.db.fetch_all("SELECT id, name, description FROM categories")
-            for cat in categories:
-                tree.insert("", END, values=cat)
-        
-        def add_category():
-            name = simpledialog.askstring("Add Category", "Category Name:")
+        win = self._report_win("Category Management", 500, 380)
+        cols = ("ID", "Name", "Description")
+        tree = self._make_report_tree(win, cols, {"ID": 50, "Name": 180, "Description": 220})
+ 
+        def load():
+            for i in tree.get_children():
+                tree.delete(i)
+            for c in self.db.fetch_all("SELECT id, name, description FROM categories"):
+                tree.insert("", END, values=c)
+ 
+        def add():
+            name = simpledialog.askstring("Add Category", "Category name:", parent=win)
             if name:
-                desc = simpledialog.askstring("Add Category", "Description (optional):")
+                desc = simpledialog.askstring("Add Category", "Description (optional):", parent=win)
                 try:
-                    self.db.execute_query("INSERT INTO categories (name, description) VALUES (?, ?)", (name, desc or ""))
-                    load_categories()
-                    self.load_categories()  # Refresh main UI categories
-                    messagebox.showinfo("Success", "Category added!")
+                    self.db.execute_query(
+                        "INSERT INTO categories (name, description) VALUES (?,?)",
+                        (name, desc or ""))
+                    load()
+                    self._load_categories()
+                    self._load_products()
+                    self.toast.show("Category added")
                 except sqlite3.IntegrityError:
-                    messagebox.showerror("Error", "Category already exists!")
-        
-        def delete_category():
-            selected = tree.selection()
-            if not selected:
-                messagebox.showwarning("Warning", "Please select a category to delete!")
+                    messagebox.showerror("Error", "Category already exists.", parent=win)
+ 
+        def delete():
+            sel = tree.selection()
+            if not sel:
                 return
-            
-            cat_id = tree.item(selected[0])['values'][0]
-            cat_name = tree.item(selected[0])['values'][1]
-            
-            # Check if category has products
-            products = self.db.fetch_one("SELECT COUNT(*) FROM products WHERE category_id=?", (cat_id,))
-            if products[0] > 0:
-                messagebox.showerror("Error", f"Cannot delete '{cat_name}' because it has {products[0]} products!")
+            cid  = tree.item(sel[0])["values"][0]
+            cname = tree.item(sel[0])["values"][1]
+            count = self.db.fetch_one("SELECT COUNT(*) FROM products WHERE category_id=?", (cid,))
+            if count[0] > 0:
+                messagebox.showerror("Error", f"'{cname}' has {count[0]} products.", parent=win)
                 return
-            
-            if messagebox.askyesno("Confirm", f"Delete category '{cat_name}'?"):
-                self.db.execute_query("DELETE FROM categories WHERE id=?", (cat_id,))
-                load_categories()
-                self.load_categories()
-        
-        Button(cat_win, text="Add Category", command=add_category, bg=THEMES[self.theme_name]["accent"], fg="white").pack(side=LEFT, padx=10, pady=10)
-        Button(cat_win, text="Delete Category", command=delete_category, bg=THEMES[self.theme_name]["danger"], fg="white").pack(side=LEFT, padx=10, pady=10)
-
-        
-        load_categories()
-        self.apply_theme_to_widget(cat_win, THEMES[self.theme_name])
-    
-    def logout(self):
-        if messagebox.askyesno("Confirm", "Logout?"):
+            if messagebox.askyesno("Confirm", f"Delete '{cname}'?", parent=win):
+                self.db.execute_query("DELETE FROM categories WHERE id=?", (cid,))
+                load()
+                self._load_categories()
+                self.toast.show("Category deleted")
+ 
+        bf = Frame(win, bg=G["panel"])
+        bf.pack(pady=8)
+        Button(bf, text="Add Category", font=("Segoe UI", 10, "bold"),
+               command=add, bg=G["accent"], fg="#FFF",
+               relief=FLAT, cursor="hand2", bd=0, padx=16, pady=7).pack(side=LEFT, padx=4)
+        Button(bf, text="Delete Category", font=("Segoe UI", 10, "bold"),
+               command=delete, bg=G["red"], fg="#FFF",
+               relief=FLAT, cursor="hand2", bd=0, padx=16, pady=7).pack(side=LEFT, padx=4)
+        load()
+ 
+    def _product_management(self):
+        if self.role != "admin":
+            messagebox.showerror("Access Denied", "Admin only.")
+            return
+        win = self._report_win("Product Management", 900, 540)
+        cols = ("ID", "Barcode", "Name", "Category", "Price", "Cost", "Stock", "Min", "Unit")
+        widths = {"ID": 40, "Barcode": 100, "Name": 180, "Category": 110,
+                  "Price": 70, "Cost": 70, "Stock": 60, "Min": 60, "Unit": 60}
+        tree = self._make_report_tree(win, cols, widths)
+        tree.tag_configure("low", foreground=G["red"])
+ 
+        def load():
+            for i in tree.get_children():
+                tree.delete(i)
+            rows = self.db.fetch_all(
+                """SELECT p.id, p.barcode, p.name, c.name, p.price, p.cost,
+                          p.quantity, p.min_stock, p.unit
+                   FROM products p LEFT JOIN categories c ON p.category_id = c.id
+                   ORDER BY p.name""")
+            for row in rows:
+                tags = ("low",) if (row[6] or 0) <= (row[7] or 0) else ()
+                tree.insert("", END, values=row, tags=tags)
+ 
+        def add_product():
+            cats = self.db.fetch_all("SELECT id, name FROM categories ORDER BY name")
+            cat_map = {c[1]: c[0] for c in cats}
+ 
+            aw = Toplevel(win)
+            aw.title("Add Product")
+            aw.geometry("360x480")
+            aw.configure(bg=G["panel"])
+            aw.transient(win)
+            aw.grab_set()
+            self._center_win(aw, 360, 480)
+ 
+            entries = {}
+            field_defs = [
+                ("Barcode", "barcode"), ("Name *", "name"), ("Price *", "price"),
+                ("Cost", "cost"), ("Stock", "stock"), ("Min Stock", "min_stock"),
+                ("Unit (pcs/kg/l…)", "unit"),
+            ]
+            for lbl, key in field_defs:
+                Label(aw, text=lbl, font=("Segoe UI", 9),
+                      bg=G["panel"], fg=G["txt2"]).pack(pady=(6, 1), anchor=W, padx=24)
+                e = Entry(aw, font=("Segoe UI", 11), relief=FLAT,
+                          bg=G["input_bg"], fg=G["txt"],
+                          highlightbackground=G["border"], highlightthickness=1)
+                e.pack(ipady=5, padx=24, fill=X)
+                entries[key] = e
+ 
+            Label(aw, text="Category", font=("Segoe UI", 9),
+                  bg=G["panel"], fg=G["txt2"]).pack(pady=(6, 1), anchor=W, padx=24)
+            cat_cb = ttk.Combobox(aw, values=list(cat_map.keys()),
+                                  state="readonly", style="Glass.TCombobox")
+            if cats:
+                cat_cb.set(cats[0][1])
+            cat_cb.pack(padx=24, fill=X)
+ 
+            def save():
+                name = entries["name"].get().strip()
+                price = entries["price"].get().strip()
+                if not name or not price:
+                    messagebox.showerror("Error", "Name and Price are required.", parent=aw)
+                    return
+                try:
+                    price_v = float(price)
+                    cost_v  = float(entries["cost"].get() or 0)
+                    stock_v = int(entries["stock"].get() or 0)
+                    min_v   = int(entries["min_stock"].get() or 0)
+                except ValueError:
+                    messagebox.showerror("Error", "Invalid numeric values.", parent=aw)
+                    return
+                cat_id = cat_map.get(cat_cb.get())
+                bc = entries["barcode"].get().strip() or None
+                try:
+                    self.db.execute_query(
+                        """INSERT INTO products
+                           (barcode, name, category_id, price, cost, quantity, min_stock, unit)
+                           VALUES (?,?,?,?,?,?,?,?)""",
+                        (bc, name, cat_id, price_v, cost_v, stock_v, min_v,
+                         entries["unit"].get().strip() or "pcs"))
+                    load()
+                    self._load_products()
+                    aw.destroy()
+                    self.toast.show(f"Product '{name}' added")
+                except sqlite3.IntegrityError:
+                    messagebox.showerror("Error", "Barcode already exists.", parent=aw)
+ 
+            Button(aw, text="Save Product", font=("Segoe UI", 11, "bold"),
+                   command=save, bg=G["accent"], fg="#FFF",
+                   relief=FLAT, cursor="hand2", bd=0, pady=10).pack(
+                fill=X, padx=24, pady=12)
+ 
+        def delete_product():
+            sel = tree.selection()
+            if not sel:
+                return
+            pid  = tree.item(sel[0])["values"][0]
+            name = tree.item(sel[0])["values"][2]
+            if messagebox.askyesno("Confirm", f"Delete '{name}'?", parent=win):
+                self.db.execute_query("DELETE FROM products WHERE id=?", (pid,))
+                load()
+                self._load_products()
+                self.toast.show(f"Product '{name}' deleted")
+ 
+        bf = Frame(win, bg=G["panel"])
+        bf.pack(pady=8)
+        Button(bf, text="Add Product", font=("Segoe UI", 10, "bold"),
+               command=add_product, bg=G["accent"], fg="#FFF",
+               relief=FLAT, cursor="hand2", bd=0, padx=16, pady=7).pack(side=LEFT, padx=4)
+        Button(bf, text="Delete Product", font=("Segoe UI", 10, "bold"),
+               command=delete_product, bg=G["red"], fg="#FFF",
+               relief=FLAT, cursor="hand2", bd=0, padx=16, pady=7).pack(side=LEFT, padx=4)
+        Button(bf, text="Refresh", font=("Segoe UI", 10, "bold"),
+               command=load, bg=G["txt2"], fg="#FFF",
+               relief=FLAT, cursor="hand2", bd=0, padx=16, pady=7).pack(side=LEFT, padx=4)
+        load()
+ 
+    # ── AUTH ──────────────────────────────────
+    def _change_password(self):
+        win = Toplevel(self.root)
+        win.title("Change Password")
+        win.geometry("340x280")
+        win.configure(bg=G["panel"])
+        win.transient(self.root)
+        win.grab_set()
+        self._center_win(win, 340, 280)
+ 
+        Label(win, text="Change Password", font=("Segoe UI", 13, "bold"),
+              bg=G["topbar"], fg=G["txt"], pady=10).pack(fill=X)
+ 
+        entries = {}
+        for lbl, key in [("Current Password", "cur"), ("New Password", "new"),
+                          ("Confirm Password", "con")]:
+            Label(win, text=lbl, font=("Segoe UI", 9),
+                  bg=G["panel"], fg=G["txt2"]).pack(pady=(8, 1), anchor=W, padx=24)
+            e = Entry(win, show="•", font=("Segoe UI", 11), relief=FLAT,
+                      bg=G["input_bg"], fg=G["txt"],
+                      highlightbackground=G["border"], highlightthickness=1)
+            e.pack(ipady=6, padx=24, fill=X)
+            entries[key] = e
+ 
+        def change():
+            cur_hash = hashlib.sha256(entries["cur"].get().encode()).hexdigest()
+            if not self.db.fetch_one(
+                    "SELECT id FROM users WHERE id=? AND password=?",
+                    (self.user_id, cur_hash)):
+                messagebox.showerror("Error", "Current password incorrect.", parent=win)
+                return
+            if entries["new"].get() != entries["con"].get():
+                messagebox.showerror("Error", "New passwords don't match.", parent=win)
+                return
+            if len(entries["new"].get()) < 4:
+                messagebox.showerror("Error", "Minimum 4 characters.", parent=win)
+                return
+            new_hash = hashlib.sha256(entries["new"].get().encode()).hexdigest()
+            self.db.execute_query(
+                "UPDATE users SET password=? WHERE id=?", (new_hash, self.user_id))
+            win.destroy()
+            self.toast.show("✓ Password changed")
+ 
+        Button(win, text="Update Password", font=("Segoe UI", 11, "bold"),
+               command=change, bg=G["accent"], fg="#FFF",
+               relief=FLAT, cursor="hand2", bd=0, pady=10).pack(
+            fill=X, padx=24, pady=14)
+ 
+    def _logout(self):
+        if messagebox.askyesno("Logout", "Log out of myPOS?"):
             self.db.close()
             self.root.destroy()
-            login_root = Tk()
-            LoginWindow(login_root, self.theme_name)
-            login_root.mainloop()
-
+            r = Tk()
+            LoginWindow(r)
+            r.mainloop()
+ 
+    # ── UTIL ──────────────────────────────────
+    def _center_win(self, win, w, h):
+        win.update_idletasks()
+        sw, sh = win.winfo_screenwidth(), win.winfo_screenheight()
+        win.geometry(f"{w}x{h}+{(sw-w)//2}+{(sh-h)//2}")
+ 
+ 
+# ─────────────────────────────────────────────
 if __name__ == "__main__":
     root = Tk()
-    LoginWindow(root, "Dark")
+    LoginWindow(root)
     root.mainloop()
+ 
