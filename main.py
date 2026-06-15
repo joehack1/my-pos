@@ -233,7 +233,17 @@ def setup_ttk_style(style: ttk.Style):
                     troughcolor=G["panel"],
                     arrowcolor=G["accent"],
                     relief=FLAT, bd=0)
+    style.configure("Vertical.GlassV.TScrollbar",
+                    background=G["scrollbar"],
+                    troughcolor=G["panel"],
+                    arrowcolor=G["accent"],
+                    relief=FLAT, bd=0)
     style.configure("GlassH.TScrollbar",
+                    background=G["scrollbar"],
+                    troughcolor=G["panel"],
+                    arrowcolor=G["accent"],
+                    relief=FLAT, bd=0)
+    style.configure("Horizontal.GlassH.TScrollbar",
                     background=G["scrollbar"],
                     troughcolor=G["panel"],
                     arrowcolor=G["accent"],
@@ -392,16 +402,17 @@ class MainApp:
         self.root.geometry("1280x760")
         self.root.configure(bg=G["shell"])
         self.root.minsize(1100, 680)
- 
+
         self.db = Database()
         self.cart = []
         self.pay_method = StringVar(value="Cash")
+        self._active_cat = "All"  # Initialize early!
         self.style = ttk.Style(self.root)
         setup_ttk_style(self.style)
- 
+
         self._center(1280, 760)
         self.toast = Toast(self.root)
- 
+
         self._build_menu()
         self._build_ui()
         self._load_categories()
@@ -573,8 +584,7 @@ class MainApp:
         self.prod_tree.tag_configure("even", background=G["panel"])
         self.prod_tree.tag_configure("low", foreground=G["red"])
  
-        vsb = ttk.Scrollbar(tree_f, orient=VERTICAL, command=self.prod_tree.yview,
-                            style="GlassV.TScrollbar")
+        vsb = ttk.Scrollbar(tree_f, orient=VERTICAL, command=self.prod_tree.yview)
         self.prod_tree.configure(yscrollcommand=vsb.set)
         self.prod_tree.pack(side=LEFT, fill=BOTH, expand=True)
         vsb.pack(side=RIGHT, fill=Y)
@@ -750,19 +760,22 @@ class MainApp:
  
     # ── PRODUCTS ──────────────────────────────
     def _load_products(self, *_):
+        print("\n=== _load_products() CALLED ===")
         for item in self.prod_tree.get_children():
             self.prod_tree.delete(item)
- 
+
         raw_search = self.search_var.get()
         search = "" if raw_search == "Search products..." else raw_search.strip()
         cat = self._active_cat
- 
+        print(f"  Active Category: '{cat}', Search: '{search}'")
+
         if cat == "All":
             if search:
                 q = """SELECT p.id, p.barcode, p.name, c.name, p.price, p.quantity, p.unit
                        FROM products p LEFT JOIN categories c ON p.category_id = c.id
                        WHERE p.name LIKE ? OR p.barcode LIKE ? ORDER BY p.name"""
-                rows = self.db.fetch_all(q, (f"%{search}%", f"%{search}%"))
+                params = (f"%{search}%", f"%{search}%")
+                rows = self.db.fetch_all(q, params)
             else:
                 q = """SELECT p.id, p.barcode, p.name, c.name, p.price, p.quantity, p.unit
                        FROM products p LEFT JOIN categories c ON p.category_id = c.id
@@ -773,21 +786,26 @@ class MainApp:
                 q = """SELECT p.id, p.barcode, p.name, c.name, p.price, p.quantity, p.unit
                        FROM products p JOIN categories c ON p.category_id = c.id
                        WHERE c.name=? AND (p.name LIKE ? OR p.barcode LIKE ?) ORDER BY p.name"""
-                rows = self.db.fetch_all(q, (cat, f"%{search}%", f"%{search}%"))
+                params = (cat, f"%{search}%", f"%{search}%")
+                rows = self.db.fetch_all(q, params)
             else:
                 q = """SELECT p.id, p.barcode, p.name, c.name, p.price, p.quantity, p.unit
                        FROM products p JOIN categories c ON p.category_id = c.id
                        WHERE c.name=? ORDER BY p.name"""
                 rows = self.db.fetch_all(q, (cat,))
- 
+
+        print(f"  Number of products found: {len(rows)}")
         for i, row in enumerate(rows):
+            print(f"  Adding product: {row}")
             tag = "odd" if i % 2 else "even"
             tags = [tag]
             if row[5] is not None and row[5] <= 3:
                 tags.append("low")
             self.prod_tree.insert("", END, values=row, tags=tags)
- 
+
         self.prod_count_lbl.config(text=f"{len(rows)} products")
+        print(f"  Set product count label to: {len(rows)} products")
+        print("=== _load_products() DONE ===")
  
     def _barcode_lookup(self, event=None):
         bc = self.barcode_var.get().strip()
