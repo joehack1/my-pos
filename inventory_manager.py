@@ -2,6 +2,7 @@
 import sqlite3
 from tkinter import *
 from tkinter import ttk, messagebox, simpledialog
+from decimal import Decimal
 import re
 
 class InventoryManager:
@@ -12,6 +13,9 @@ class InventoryManager:
         
     def add_product(self, name, barcode, category_id, price, cost, quantity, min_stock, unit):
         try:
+            # Ensure values are stored with proper precision if needed
+            price = float(Decimal(str(price)))
+            cost = float(Decimal(str(cost)))
             self.cursor.execute("""
                 INSERT INTO products (name, barcode, category_id, price, cost, quantity, min_stock, unit)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
