@@ -14,48 +14,178 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
  
 # ─────────────────────────────────────────────
-#  LIQUID GLASS THEME  (single palette)
+#  THEMES
 # ─────────────────────────────────────────────
-G = {
-    # backgrounds
-    "shell":        "#D4DCFF",   # outermost gradient proxy
-    "panel":        "#E8EEFF",   # glass panel
-    "panel_hover":  "#F0F4FF",
-    "card":         "#EEF2FF",
-    "card_hover":   "#F5F8FF",
-    "input_bg":     "#F2F5FF",
-    "sidebar":      "#E2E8FF",
- 
-    # borders
-    "border":       "#C0CAFF",
-    "border_light": "#D8DEFF",
- 
-    # text
-    "txt":          "#1A1A3A",
-    "txt2":         "#5A5A8A",
-    "txt3":         "#9898C0",
-    "txt_white":    "#FFFFFF",
- 
-    # accents
-    "accent":       "#5E6FFF",
-    "accent_dark":  "#4050DD",
-    "accent_light": "#8090FF",
-    "accent2":      "#A78BFA",
-    "green":        "#10B981",
-    "green_bg":     "#D1FAE5",
-    "red":          "#EF4444",
-    "red_bg":       "#FEE2E2",
-    "amber":        "#F59E0B",
-    "amber_bg":     "#FEF3C7",
-    "info_bg":      "#EFF6FF",
-    "info":         "#3B82F6",
- 
-    # special
-    "checkout_btn": "#5E6FFF",
-    "topbar":       "#DDE5FF",
-    "status_dot":   "#10B981",
-    "scrollbar":    "#C8D0FF",
+THEMES = {
+    "Liquid Glass": {
+        # backgrounds
+        "shell":        "#D4DCFF",   # outermost gradient proxy
+        "panel":        "#E8EEFF",   # glass panel
+        "panel_hover":  "#F0F4FF",
+        "card":         "#EEF2FF",
+        "card_hover":   "#F5F8FF",
+        "input_bg":     "#F2F5FF",
+        "sidebar":      "#E2E8FF",
+
+        # borders
+        "border":       "#C0CAFF",
+        "border_light": "#D8DEFF",
+
+        # text
+        "txt":          "#1A1A3A",
+        "txt2":         "#5A5A8A",
+        "txt3":         "#9898C0",
+        "txt_white":    "#FFFFFF",
+
+        # accents
+        "accent":       "#5E6FFF",
+        "accent_dark":  "#4050DD",
+        "accent_light": "#8090FF",
+        "accent2":      "#A78BFA",
+        "green":        "#10B981",
+        "green_bg":     "#D1FAE5",
+        "red":          "#EF4444",
+        "red_bg":       "#FEE2E2",
+        "amber":        "#F59E0B",
+        "amber_bg":     "#FEF3C7",
+        "info_bg":      "#EFF6FF",
+        "info":         "#3B82F6",
+
+        # special
+        "checkout_btn": "#5E6FFF",
+        "topbar":       "#DDE5FF",
+        "status_dot":   "#10B981",
+        "scrollbar":    "#C8D0FF",
+    },
+    "Dark": {
+        "shell":        "#121212",
+        "panel":        "#1E1E1E",
+        "panel_hover":  "#2A2A2A",
+        "card":         "#1E1E1E",
+        "card_hover":   "#2A2A2A",
+        "input_bg":     "#2A2A2A",
+        "sidebar":      "#1E1E1E",
+        "border":       "#333333",
+        "border_light": "#444444",
+        "txt":          "#EAEAEA",
+        "txt2":         "#AAAAAA",
+        "txt3":         "#777777",
+        "txt_white":    "#FFFFFF",
+        "accent":       "#4CAF50",
+        "accent_dark":  "#388E3C",
+        "accent_light": "#66BB6A",
+        "accent2":      "#2196F3",
+        "green":        "#4CAF50",
+        "green_bg":     "#1B5E20",
+        "red":          "#F44336",
+        "red_bg":       "#B71C1C",
+        "amber":        "#FF9800",
+        "amber_bg":     "#E65100",
+        "info_bg":      "#0D47A1",
+        "info":         "#2196F3",
+        "checkout_btn": "#4CAF50",
+        "topbar":       "#1E1E1E",
+        "status_dot":   "#4CAF50",
+        "scrollbar":    "#333333",
+    },
+    "Light": {
+        "shell":        "#F5F5F5",
+        "panel":        "#FFFFFF",
+        "panel_hover":  "#E0E0E0",
+        "card":         "#FFFFFF",
+        "card_hover":   "#F0F0F0",
+        "input_bg":     "#FFFFFF",
+        "sidebar":      "#F0F0F0",
+        "border":       "#E0E0E0",
+        "border_light": "#F0F0F0",
+        "txt":          "#111111",
+        "txt2":         "#555555",
+        "txt3":         "#999999",
+        "txt_white":    "#FFFFFF",
+        "accent":       "#4CAF50",
+        "accent_dark":  "#388E3C",
+        "accent_light": "#66BB6A",
+        "accent2":      "#2196F3",
+        "green":        "#4CAF50",
+        "green_bg":     "#D1FAE5",
+        "red":          "#F44336",
+        "red_bg":       "#FEE2E2",
+        "amber":        "#FF9800",
+        "amber_bg":     "#FEF3C7",
+        "info_bg":      "#E3F2FD",
+        "info":         "#2196F3",
+        "checkout_btn": "#4CAF50",
+        "topbar":       "#F5F5F5",
+        "status_dot":   "#4CAF50",
+        "scrollbar":    "#E0E0E0",
+    },
+    "Blue": {
+        "shell":        "#0B1B3A",
+        "panel":        "#12315E",
+        "panel_hover":  "#1A4A8A",
+        "card":         "#12315E",
+        "card_hover":   "#1A4A8A",
+        "input_bg":     "#163B70",
+        "sidebar":      "#12315E",
+        "border":       "#1A4A8A",
+        "border_light": "#2A6ACC",
+        "txt":          "#EAF2FF",
+        "txt2":         "#A0C0FF",
+        "txt3":         "#6080CC",
+        "txt_white":    "#FFFFFF",
+        "accent":       "#2E7DFF",
+        "accent_dark":  "#1A5CCC",
+        "accent_light": "#5E97FF",
+        "accent2":      "#00BCD4",
+        "green":        "#00BCD4",
+        "green_bg":     "#004D40",
+        "red":          "#FF5252",
+        "red_bg":       "#B71C1C",
+        "amber":        "#FFC107",
+        "amber_bg":     "#E65100",
+        "info_bg":      "#0D47A1",
+        "info":         "#2E7DFF",
+        "checkout_btn": "#2E7DFF",
+        "topbar":       "#12315E",
+        "status_dot":   "#00BCD4",
+        "scrollbar":    "#1A4A8A",
+    },
+    "Mint": {
+        "shell":        "#06221C",
+        "panel":        "#0B3A2E",
+        "panel_hover":  "#125544",
+        "card":         "#0B3A2E",
+        "card_hover":   "#125544",
+        "input_bg":     "#0F4A39",
+        "sidebar":      "#0B3A2E",
+        "border":       "#125544",
+        "border_light": "#1A7755",
+        "txt":          "#E9FFF6",
+        "txt2":         "#A0E0CC",
+        "txt3":         "#60AA88",
+        "txt_white":    "#FFFFFF",
+        "accent":       "#2ECC71",
+        "accent_dark":  "#1A9944",
+        "accent_light": "#58D68D",
+        "accent2":      "#1ABC9C",
+        "green":        "#2ECC71",
+        "green_bg":     "#1A5533",
+        "red":          "#E74C3C",
+        "red_bg":       "#7F1D1D",
+        "amber":        "#F39C12",
+        "amber_bg":     "#8B4513",
+        "info_bg":      "#0D3D28",
+        "info":         "#1ABC9C",
+        "checkout_btn": "#2ECC71",
+        "topbar":       "#0B3A2E",
+        "status_dot":   "#2ECC71",
+        "scrollbar":    "#125544",
+    }
 }
+
+# Current active theme
+current_theme_name = "Liquid Glass"
+G = THEMES[current_theme_name]
  
 # Map roles used in buttons so theme engine can remap them
 ROLE_COLORS = {
@@ -195,59 +325,93 @@ class Database:
 # ─────────────────────────────────────────────
 #  TTK STYLE SETUP
 # ─────────────────────────────────────────────
-def setup_ttk_style(style: ttk.Style):
+def setup_ttk_style(style: ttk.Style, theme):
     try:
         style.theme_use('clam')
     except Exception:
         pass
- 
+
     style.configure("Glass.Treeview",
-                    background=G["card"],
-                    foreground=G["txt"],
-                    fieldbackground=G["card"],
+                    background=theme["card"],
+                    foreground=theme["txt"],
+                    fieldbackground=theme["card"],
                     rowheight=28,
                     font=("Segoe UI", 10))
     style.configure("Glass.Treeview.Heading",
-                    background=G["topbar"],
-                    foreground=G["txt"],
+                    background=theme["topbar"],
+                    foreground=theme["txt"],
                     font=("Segoe UI", 10, "bold"),
                     relief="flat")
     style.map("Glass.Treeview",
-              background=[("selected", G["accent"])],
+              background=[("selected", theme["accent"])],
               foreground=[("selected", "#FFFFFF")])
- 
+
     style.configure("Glass.TCombobox",
-                    fieldbackground=G["input_bg"],
-                    background=G["input_bg"],
-                    foreground=G["txt"],
-                    selectbackground=G["accent"],
+                    fieldbackground=theme["input_bg"],
+                    background=theme["input_bg"],
+                    foreground=theme["txt"],
+                    selectbackground=theme["accent"],
                     selectforeground="#FFFFFF",
-                    bordercolor=G["border"],
-                    arrowcolor=G["accent"])
+                    bordercolor=theme["border"],
+                    arrowcolor=theme["accent"])
     style.map("Glass.TCombobox",
-              fieldbackground=[("readonly", G["input_bg"])],
-              foreground=[("readonly", G["txt"])])
- 
+              fieldbackground=[("readonly", theme["input_bg"])],
+              foreground=[("readonly", theme["txt"])])
+
     style.configure("GlassV.TScrollbar",
-                    background=G["scrollbar"],
-                    troughcolor=G["panel"],
-                    arrowcolor=G["accent"],
+                    background=theme["scrollbar"],
+                    troughcolor=theme["panel"],
+                    arrowcolor=theme["accent"],
                     relief=FLAT, bd=0)
     style.configure("Vertical.GlassV.TScrollbar",
-                    background=G["scrollbar"],
-                    troughcolor=G["panel"],
-                    arrowcolor=G["accent"],
+                    background=theme["scrollbar"],
+                    troughcolor=theme["panel"],
+                    arrowcolor=theme["accent"],
                     relief=FLAT, bd=0)
     style.configure("GlassH.TScrollbar",
-                    background=G["scrollbar"],
-                    troughcolor=G["panel"],
-                    arrowcolor=G["accent"],
+                    background=theme["scrollbar"],
+                    troughcolor=theme["panel"],
+                    arrowcolor=theme["accent"],
                     relief=FLAT, bd=0)
     style.configure("Horizontal.GlassH.TScrollbar",
-                    background=G["scrollbar"],
-                    troughcolor=G["panel"],
-                    arrowcolor=G["accent"],
+                    background=theme["scrollbar"],
+                    troughcolor=theme["panel"],
+                    arrowcolor=theme["accent"],
                     relief=FLAT, bd=0)
+
+
+def apply_theme_to_widget(widget, theme):
+    """Recursively apply theme to a widget and all its children"""
+    try:
+        # Configure widget based on type
+        if isinstance(widget, (Tk, Toplevel)):
+            widget.configure(bg=theme["shell"])
+        elif isinstance(widget, Frame):
+            widget.configure(bg=theme["panel"])
+        elif isinstance(widget, Label):
+            widget.configure(bg=theme["panel"], fg=theme["txt"])
+        elif isinstance(widget, Entry):
+            widget.configure(
+                bg=theme["input_bg"],
+                fg=theme["txt"],
+                insertbackground=theme["accent"],
+                highlightbackground=theme["border"],
+                highlightcolor=theme["accent"]
+            )
+        elif isinstance(widget, Button):
+            # Keep track of button's original role if possible, but for now use accent
+            widget.configure(
+                bg=theme["accent"],
+                fg=theme["txt_white"],
+                activebackground=theme["accent_dark"],
+                activeforeground=theme["txt_white"]
+            )
+    except Exception:
+        pass
+
+    # Recursively apply to children
+    for child in widget.winfo_children():
+        apply_theme_to_widget(child, theme)
  
 # ─────────────────────────────────────────────
 #  GLASS FRAME WIDGET
@@ -407,8 +571,9 @@ class MainApp:
         self.cart = []
         self.pay_method = StringVar(value="Cash")
         self._active_cat = "All"  # Initialize early!
+        self.current_theme_name = current_theme_name
         self.style = ttk.Style(self.root)
-        setup_ttk_style(self.style)
+        setup_ttk_style(self.style, G)
 
         self._center(1280, 760)
         self.toast = Toast(self.root)
@@ -416,6 +581,31 @@ class MainApp:
         self._build_menu()
         self._build_ui()
         self._load_categories()
+        self._load_products()
+    
+    def switch_theme(self, theme_name):
+        """Switch to a new theme"""
+        global G, current_theme_name
+        
+        # Update global variables
+        current_theme_name = theme_name
+        G = THEMES[theme_name]
+        self.current_theme_name = theme_name
+        
+        # Update ROLE_COLORS
+        ROLE_COLORS["accent"] = G["accent"]
+        ROLE_COLORS["accent2"] = G["info"]
+        ROLE_COLORS["danger"] = G["red"]
+        ROLE_COLORS["warning"] = G["amber"]
+        ROLE_COLORS["info"] = G["accent2"]
+        
+        # Update ttk styles
+        setup_ttk_style(self.style, G)
+        
+        # Apply theme to all widgets
+        apply_theme_to_widget(self.root, G)
+        
+        # Reload UI components that depend on theme
         self._load_products()
  
     def _center(self, w, h):
@@ -459,7 +649,7 @@ class MainApp:
         topbar = Frame(self.root, bg=G["topbar"], height=52)
         topbar.pack(fill=X, padx=12, pady=(10, 0))
         topbar.pack_propagate(False)
- 
+
         # Brand
         brand_f = Frame(topbar, bg=G["topbar"])
         brand_f.pack(side=LEFT, padx=16, pady=10)
@@ -468,7 +658,7 @@ class MainApp:
         dot_c.create_oval(0, 0, 10, 10, fill=G["accent"], outline="")
         Label(brand_f, text="myPOS", font=("Segoe UI", 16, "bold"),
               bg=G["topbar"], fg=G["txt"]).pack(side=LEFT)
- 
+
         # Status dot
         status_f = Frame(topbar, bg=G["topbar"], highlightbackground=G["border"],
                          highlightthickness=1)
@@ -478,10 +668,22 @@ class MainApp:
         dot2.create_oval(0, 0, 8, 8, fill=G["green"], outline="")
         Label(status_f, text="Online", font=("Segoe UI", 9),
               bg=G["topbar"], fg=G["txt2"]).pack(side=LEFT, padx=(0, 6))
- 
+
         # Right side info
         right_f = Frame(topbar, bg=G["topbar"])
         right_f.pack(side=RIGHT, padx=16, pady=8)
+        
+        # Theme selector
+        theme_f = Frame(right_f, bg=G["topbar"])
+        theme_f.pack(side=RIGHT, padx=8)
+        self.theme_var = StringVar(value=self.current_theme_name)
+        theme_combo = ttk.Combobox(theme_f, textvariable=self.theme_var,
+                                  values=list(THEMES.keys()), state="readonly",
+                                  width=12, style="Glass.TCombobox")
+        theme_combo.pack(side=LEFT, pady=2)
+        theme_combo.bind("<<ComboboxSelected>>", 
+                         lambda e: self.switch_theme(self.theme_var.get()))
+        
         now = datetime.datetime.now().strftime("%d %b %Y  %H:%M")
         Label(right_f, text=now, font=("Segoe UI", 9),
               bg=G["topbar"], fg=G["txt2"]).pack(side=RIGHT, padx=8)
@@ -760,22 +962,19 @@ class MainApp:
  
     # ── PRODUCTS ──────────────────────────────
     def _load_products(self, *_):
-        print("\n=== _load_products() CALLED ===")
         for item in self.prod_tree.get_children():
             self.prod_tree.delete(item)
 
         raw_search = self.search_var.get()
         search = "" if raw_search == "Search products..." else raw_search.strip()
         cat = self._active_cat
-        print(f"  Active Category: '{cat}', Search: '{search}'")
 
         if cat == "All":
             if search:
                 q = """SELECT p.id, p.barcode, p.name, c.name, p.price, p.quantity, p.unit
                        FROM products p LEFT JOIN categories c ON p.category_id = c.id
                        WHERE p.name LIKE ? OR p.barcode LIKE ? ORDER BY p.name"""
-                params = (f"%{search}%", f"%{search}%")
-                rows = self.db.fetch_all(q, params)
+                rows = self.db.fetch_all(q, (f"%{search}%", f"%{search}%"))
             else:
                 q = """SELECT p.id, p.barcode, p.name, c.name, p.price, p.quantity, p.unit
                        FROM products p LEFT JOIN categories c ON p.category_id = c.id
@@ -786,17 +985,14 @@ class MainApp:
                 q = """SELECT p.id, p.barcode, p.name, c.name, p.price, p.quantity, p.unit
                        FROM products p JOIN categories c ON p.category_id = c.id
                        WHERE c.name=? AND (p.name LIKE ? OR p.barcode LIKE ?) ORDER BY p.name"""
-                params = (cat, f"%{search}%", f"%{search}%")
-                rows = self.db.fetch_all(q, params)
+                rows = self.db.fetch_all(q, (cat, f"%{search}%", f"%{search}%"))
             else:
                 q = """SELECT p.id, p.barcode, p.name, c.name, p.price, p.quantity, p.unit
                        FROM products p JOIN categories c ON p.category_id = c.id
                        WHERE c.name=? ORDER BY p.name"""
                 rows = self.db.fetch_all(q, (cat,))
 
-        print(f"  Number of products found: {len(rows)}")
         for i, row in enumerate(rows):
-            print(f"  Adding product: {row}")
             tag = "odd" if i % 2 else "even"
             tags = [tag]
             if row[5] is not None and row[5] <= 3:
@@ -804,8 +1000,6 @@ class MainApp:
             self.prod_tree.insert("", END, values=row, tags=tags)
 
         self.prod_count_lbl.config(text=f"{len(rows)} products")
-        print(f"  Set product count label to: {len(rows)} products")
-        print("=== _load_products() DONE ===")
  
     def _barcode_lookup(self, event=None):
         bc = self.barcode_var.get().strip()
